@@ -60,6 +60,8 @@ enum Commands {
     Zones(commands::zones::ZonesArgs),
     /// Manage built-in variables
     BuiltinVariables(commands::builtin_variables::BuiltinVariablesArgs),
+    /// Quick setup workflows (GA4, Facebook Pixel, etc.)
+    Setup(commands::setup::SetupArgs),
 }
 
 #[tokio::main]
@@ -123,6 +125,9 @@ async fn main() {
                 }
                 Commands::BuiltinVariables(args) => {
                     commands::builtin_variables::handle(args, &client, &cli.format).await
+                }
+                Commands::Setup(args) => {
+                    commands::setup::handle(args, &client, &cli.format).await
                 }
             }
         }
