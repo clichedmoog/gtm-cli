@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use clap::{Args, Subcommand};
 use serde_json::{json, Value};
 
@@ -257,22 +259,32 @@ pub async fn handle(
                 a.account_id, a.container_id, ws_id
             );
 
-            let tags = client
-                .get(&format!("{base}/tags"))
-                .await
-                .unwrap_or(json!({}));
-            let triggers = client
-                .get(&format!("{base}/triggers"))
-                .await
-                .unwrap_or(json!({}));
-            let variables = client
-                .get(&format!("{base}/variables"))
-                .await
-                .unwrap_or(json!({}));
-            let folders = client
-                .get(&format!("{base}/folders"))
-                .await
-                .unwrap_or(json!({}));
+            let (tags, triggers, variables, folders) = tokio::join!(
+                async {
+                    client
+                        .get(&format!("{base}/tags"))
+                        .await
+                        .unwrap_or(json!({}))
+                },
+                async {
+                    client
+                        .get(&format!("{base}/triggers"))
+                        .await
+                        .unwrap_or(json!({}))
+                },
+                async {
+                    client
+                        .get(&format!("{base}/variables"))
+                        .await
+                        .unwrap_or(json!({}))
+                },
+                async {
+                    client
+                        .get(&format!("{base}/folders"))
+                        .await
+                        .unwrap_or(json!({}))
+                },
+            );
 
             let export = json!({
                 "exportVersion": "1",
@@ -311,8 +323,7 @@ pub async fn handle(
                 .map_err(|_| crate::error::GtmError::InvalidParams(a.input.clone()))?;
 
             // Create folders first
-            let mut folder_id_map: std::collections::HashMap<String, String> =
-                std::collections::HashMap::new();
+            let mut folder_id_map: HashMap<String, String> = HashMap::new();
             if let Some(folders) = export["folders"].as_array() {
                 for folder in folders {
                     let body = json!({
@@ -330,8 +341,7 @@ pub async fn handle(
             }
 
             // Create triggers
-            let mut trigger_id_map: std::collections::HashMap<String, String> =
-                std::collections::HashMap::new();
+            let mut trigger_id_map: HashMap<String, String> = HashMap::new();
             if let Some(triggers) = export["triggers"].as_array() {
                 for trigger in triggers {
                     let mut body = json!({
@@ -366,6 +376,15 @@ pub async fn handle(
                 }
             }
 
+            // Helper: remap parentFolderId using folder_id_map
+            let remap_folder = |entity: &Value, body: &mut Value, map: &HashMap<String, String>| {
+                if let Some(old_folder) = entity["parentFolderId"].as_str() {
+                    if let Some(new_folder) = map.get(old_folder) {
+                        body["parentFolderId"] = json!(new_folder);
+                    }
+                }
+            };
+
             // Create variables
             if let Some(variables) = export["variables"].as_array() {
                 for variable in variables {
@@ -376,11 +395,7 @@ pub async fn handle(
                     if variable.get("parameter").is_some() {
                         body["parameter"] = variable["parameter"].clone();
                     }
-                    if let Some(old_folder) = variable["parentFolderId"].as_str() {
-                        if let Some(new_folder) = folder_id_map.get(old_folder) {
-                            body["parentFolderId"] = json!(new_folder);
-                        }
-                    }
+                    remap_folder(variable, &mut body, &folder_id_map);
                     client.post(&format!("{base}/variables"), &body).await?;
                     eprintln!(
                         "Created variable: {}",
@@ -399,38 +414,22 @@ pub async fn handle(
                     if tag.get("parameter").is_some() {
                         body["parameter"] = tag["parameter"].clone();
                     }
-                    // Remap firing trigger IDs
-                    if let Some(ids) = tag["firingTriggerId"].as_array() {
-                        let new_ids: Vec<&str> = ids
-                            .iter()
-                            .filter_map(|id| {
-                                id.as_str()
-                                    .and_then(|old| trigger_id_map.get(old))
-                                    .map(|s| s.as_str())
-                            })
-                            .collect();
-                        if !new_ids.is_empty() {
-                            body["firingTriggerId"] = json!(new_ids);
+                    // Remap trigger IDs, preserving unmapped ones (e.g. built-in triggers)
+                    for field in ["firingTriggerId", "blockingTriggerId"] {
+                        if let Some(ids) = tag[field].as_array() {
+                            let new_ids: Vec<&str> = ids
+                                .iter()
+                                .filter_map(|id| id.as_str())
+                                .map(|old| {
+                                    trigger_id_map.get(old).map(|s| s.as_str()).unwrap_or(old)
+                                })
+                                .collect();
+                            if !new_ids.is_empty() {
+                                body[field] = json!(new_ids);
+                            }
                         }
                     }
-                    if let Some(ids) = tag["blockingTriggerId"].as_array() {
-                        let new_ids: Vec<&str> = ids
-                            .iter()
-                            .filter_map(|id| {
-                                id.as_str()
-                                    .and_then(|old| trigger_id_map.get(old))
-                                    .map(|s| s.as_str())
-                            })
-                            .collect();
-                        if !new_ids.is_empty() {
-                            body["blockingTriggerId"] = json!(new_ids);
-                        }
-                    }
-                    if let Some(old_folder) = tag["parentFolderId"].as_str() {
-                        if let Some(new_folder) = folder_id_map.get(old_folder) {
-                            body["parentFolderId"] = json!(new_folder);
-                        }
-                    }
+                    remap_folder(tag, &mut body, &folder_id_map);
                     client.post(&format!("{base}/tags"), &body).await?;
                     eprintln!("Created tag: {}", tag["name"].as_str().unwrap_or("?"));
                 }
