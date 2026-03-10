@@ -5,7 +5,7 @@ use crate::api::client::GtmApiClient;
 use crate::api::params::params_from_json;
 use crate::api::workspace::resolve_workspace;
 use crate::error::{GtmError, Result};
-use crate::output::formatter::{print_output, OutputFormat};
+use crate::output::formatter::{print_resource, OutputFormat};
 
 #[derive(Args)]
 pub struct TransformationsArgs {
@@ -106,12 +106,12 @@ pub async fn handle(args: TransformationsArgs, client: &GtmApiClient, format: &O
         TransformationsAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/transformations")).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "transformations");
         }
         TransformationsAction::Get(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/transformations/{}", a.transformation_id)).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "transformation");
         }
         TransformationsAction::Create(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -125,7 +125,7 @@ pub async fn handle(args: TransformationsArgs, client: &GtmApiClient, format: &O
                 body["parameter"] = json!(params_from_json(&raw));
             }
             let result = client.post(&format!("{base}/transformations"), &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "transformation");
         }
         TransformationsAction::Update(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -139,7 +139,7 @@ pub async fn handle(args: TransformationsArgs, client: &GtmApiClient, format: &O
                 body["parameter"] = json!(params_from_json(&raw));
             }
             let result = client.put(&format!("{base}/transformations/{}", a.transformation_id), &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "transformation");
         }
         TransformationsAction::Delete(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -151,7 +151,7 @@ pub async fn handle(args: TransformationsArgs, client: &GtmApiClient, format: &O
             let result = client
                 .post(&format!("{base}/transformations/{}:revert", a.transformation_id), &json!({}))
                 .await?;
-            print_output(&result, format);
+            print_resource(&result, format, "transformation");
         }
     }
     Ok(())

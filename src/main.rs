@@ -13,7 +13,7 @@ use output::formatter::OutputFormat;
 
 #[derive(Parser)]
 #[command(name = "gtm", version, about = "Google Tag Manager CLI")]
-struct Cli {
+pub struct Cli {
     #[command(subcommand)]
     command: Commands,
 
@@ -62,6 +62,8 @@ enum Commands {
     BuiltinVariables(commands::builtin_variables::BuiltinVariablesArgs),
     /// Quick setup workflows (GA4, Facebook Pixel, etc.)
     Setup(commands::setup::SetupArgs),
+    /// Generate shell completions
+    Completions(commands::completions::CompletionsArgs),
 }
 
 #[tokio::main]
@@ -71,10 +73,11 @@ async fn main() {
 
     let result = match cli.command {
         Commands::Auth(args) => commands::auth::handle(args, &config).await,
+        Commands::Completions(args) => commands::completions::handle(args),
         _ => {
             let client = GtmApiClient::new(config);
             match cli.command {
-                Commands::Auth(_) => unreachable!(),
+                Commands::Auth(_) | Commands::Completions(_) => unreachable!(),
                 Commands::Accounts(args) => {
                     commands::accounts::handle(args, &client, &cli.format).await
                 }

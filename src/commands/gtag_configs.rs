@@ -5,7 +5,7 @@ use crate::api::client::GtmApiClient;
 use crate::api::params::params_from_json;
 use crate::api::workspace::resolve_workspace;
 use crate::error::{GtmError, Result};
-use crate::output::formatter::{print_output, OutputFormat};
+use crate::output::formatter::{print_resource, OutputFormat};
 
 #[derive(Args)]
 pub struct GtagConfigsArgs {
@@ -105,12 +105,12 @@ pub async fn handle(args: GtagConfigsArgs, client: &GtmApiClient, format: &Outpu
         GtagConfigsAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/gtag_config")).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "gtag_configs");
         }
         GtagConfigsAction::Get(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/gtag_config/{}", a.gtag_config_id)).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "gtag_config");
         }
         GtagConfigsAction::Create(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -124,7 +124,7 @@ pub async fn handle(args: GtagConfigsArgs, client: &GtmApiClient, format: &Outpu
                 body["parameter"] = json!(params_from_json(&raw));
             }
             let result = client.post(&format!("{base}/gtag_config"), &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "gtag_config");
         }
         GtagConfigsAction::Update(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -138,7 +138,7 @@ pub async fn handle(args: GtagConfigsArgs, client: &GtmApiClient, format: &Outpu
                 body["parameter"] = json!(params_from_json(&raw));
             }
             let result = client.put(&format!("{base}/gtag_config/{}", a.gtag_config_id), &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "gtag_config");
         }
         GtagConfigsAction::Delete(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -150,7 +150,7 @@ pub async fn handle(args: GtagConfigsArgs, client: &GtmApiClient, format: &Outpu
             let result = client
                 .post(&format!("{base}/gtag_config/{}:revert", a.gtag_config_id), &json!({}))
                 .await?;
-            print_output(&result, format);
+            print_resource(&result, format, "gtag_config");
         }
     }
     Ok(())

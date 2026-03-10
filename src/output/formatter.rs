@@ -1,6 +1,8 @@
 use clap::ValueEnum;
 use serde_json::Value;
 
+use super::table;
+
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum OutputFormat {
     Json,
@@ -8,6 +10,10 @@ pub enum OutputFormat {
 }
 
 pub fn print_output(value: &Value, format: &OutputFormat) {
+    print_resource(value, format, "default");
+}
+
+pub fn print_resource(value: &Value, format: &OutputFormat, resource: &str) {
     match format {
         OutputFormat::Json => {
             println!(
@@ -16,12 +22,7 @@ pub fn print_output(value: &Value, format: &OutputFormat) {
             );
         }
         OutputFormat::Table => {
-            // TODO: table rendering per resource type
-            // For now, fall back to JSON
-            println!(
-                "{}",
-                serde_json::to_string_pretty(value).unwrap_or_else(|_| value.to_string())
-            );
+            table::render(value, resource);
         }
     }
 }

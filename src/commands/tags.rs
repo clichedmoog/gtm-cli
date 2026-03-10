@@ -5,7 +5,7 @@ use crate::api::client::GtmApiClient;
 use crate::api::params::params_from_json;
 use crate::api::workspace::resolve_workspace;
 use crate::error::{GtmError, Result};
-use crate::output::formatter::{print_output, OutputFormat};
+use crate::output::formatter::{print_resource, OutputFormat};
 
 #[derive(Args)]
 pub struct TagsArgs {
@@ -128,12 +128,12 @@ pub async fn handle(args: TagsArgs, client: &GtmApiClient, format: &OutputFormat
         TagsAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/tags")).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "tags");
         }
         TagsAction::Get(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/tags/{}", a.tag_id)).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "tag");
         }
         TagsAction::Create(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -153,7 +153,7 @@ pub async fn handle(args: TagsArgs, client: &GtmApiClient, format: &OutputFormat
             }
 
             let result = client.post(&format!("{base}/tags"), &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "tag");
         }
         TagsAction::Update(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -174,7 +174,7 @@ pub async fn handle(args: TagsArgs, client: &GtmApiClient, format: &OutputFormat
             }
 
             let result = client.put(&format!("{base}/tags/{}", a.tag_id), &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "tag");
         }
         TagsAction::Delete(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -186,7 +186,7 @@ pub async fn handle(args: TagsArgs, client: &GtmApiClient, format: &OutputFormat
             let result = client
                 .post(&format!("{base}/tags/{}:revert", a.tag_id), &json!({}))
                 .await?;
-            print_output(&result, format);
+            print_resource(&result, format, "tag");
         }
     }
     Ok(())

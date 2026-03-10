@@ -3,7 +3,7 @@ use clap::{Args, Subcommand};
 use crate::api::client::GtmApiClient;
 use crate::api::workspace::resolve_workspace;
 use crate::error::Result;
-use crate::output::formatter::{print_output, OutputFormat};
+use crate::output::formatter::{print_resource, OutputFormat};
 
 #[derive(Args)]
 pub struct ZonesArgs {
@@ -56,12 +56,12 @@ pub async fn handle(args: ZonesArgs, client: &GtmApiClient, format: &OutputForma
         ZonesAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/zones")).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "zones");
         }
         ZonesAction::Get(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/zones/{}", a.zone_id)).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "zone");
         }
     }
     Ok(())

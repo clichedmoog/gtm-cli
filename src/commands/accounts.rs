@@ -3,7 +3,7 @@ use serde_json::json;
 
 use crate::api::client::GtmApiClient;
 use crate::error::Result;
-use crate::output::formatter::{print_output, OutputFormat};
+use crate::output::formatter::{print_resource, OutputFormat};
 
 #[derive(Args)]
 pub struct AccountsArgs {
@@ -45,12 +45,12 @@ pub async fn handle(args: AccountsArgs, client: &GtmApiClient, format: &OutputFo
     match args.action {
         AccountsAction::List => {
             let result = client.get("accounts").await?;
-            print_output(&result, format);
+            print_resource(&result, format, "accounts");
         }
         AccountsAction::Get(a) => {
             let path = format!("accounts/{}", a.account_id);
             let result = client.get(&path).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "account");
         }
         AccountsAction::Update(a) => {
             let path = format!("accounts/{}", a.account_id);
@@ -62,7 +62,7 @@ pub async fn handle(args: AccountsArgs, client: &GtmApiClient, format: &OutputFo
                 body["shareData"] = json!(share);
             }
             let result = client.put(&path, &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "account");
         }
     }
     Ok(())

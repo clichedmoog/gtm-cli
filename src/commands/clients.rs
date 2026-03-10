@@ -5,7 +5,7 @@ use crate::api::client::GtmApiClient;
 use crate::api::params::params_from_json;
 use crate::api::workspace::resolve_workspace;
 use crate::error::{GtmError, Result};
-use crate::output::formatter::{print_output, OutputFormat};
+use crate::output::formatter::{print_resource, OutputFormat};
 
 #[derive(Args)]
 pub struct ClientsArgs {
@@ -106,12 +106,12 @@ pub async fn handle(args: ClientsArgs, client: &GtmApiClient, format: &OutputFor
         ClientsAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/clients")).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "clients");
         }
         ClientsAction::Get(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/clients/{}", a.client_id)).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "client");
         }
         ClientsAction::Create(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -125,7 +125,7 @@ pub async fn handle(args: ClientsArgs, client: &GtmApiClient, format: &OutputFor
                 body["parameter"] = json!(params_from_json(&raw));
             }
             let result = client.post(&format!("{base}/clients"), &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "client");
         }
         ClientsAction::Update(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -139,7 +139,7 @@ pub async fn handle(args: ClientsArgs, client: &GtmApiClient, format: &OutputFor
                 body["parameter"] = json!(params_from_json(&raw));
             }
             let result = client.put(&format!("{base}/clients/{}", a.client_id), &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "client");
         }
         ClientsAction::Delete(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -151,7 +151,7 @@ pub async fn handle(args: ClientsArgs, client: &GtmApiClient, format: &OutputFor
             let result = client
                 .post(&format!("{base}/clients/{}:revert", a.client_id), &json!({}))
                 .await?;
-            print_output(&result, format);
+            print_resource(&result, format, "client");
         }
     }
     Ok(())

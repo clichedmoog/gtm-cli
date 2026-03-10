@@ -3,7 +3,7 @@ use serde_json::json;
 
 use crate::api::client::GtmApiClient;
 use crate::error::Result;
-use crate::output::formatter::{print_output, OutputFormat};
+use crate::output::formatter::{print_resource, OutputFormat};
 
 #[derive(Args)]
 pub struct WorkspacesArgs {
@@ -122,7 +122,7 @@ pub async fn handle(args: WorkspacesArgs, client: &GtmApiClient, format: &Output
         WorkspacesAction::List(a) => {
             let path = format!("accounts/{}/containers/{}/workspaces", a.c.account_id, a.c.container_id);
             let result = client.get(&path).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "workspaces");
         }
         WorkspacesAction::Get(a) => {
             let path = format!(
@@ -130,7 +130,7 @@ pub async fn handle(args: WorkspacesArgs, client: &GtmApiClient, format: &Output
                 a.ws.account_id, a.ws.container_id, a.ws.workspace_id
             );
             let result = client.get(&path).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "workspace");
         }
         WorkspacesAction::Create(a) => {
             let path = format!("accounts/{}/containers/{}/workspaces", a.c.account_id, a.c.container_id);
@@ -139,7 +139,7 @@ pub async fn handle(args: WorkspacesArgs, client: &GtmApiClient, format: &Output
                 body["description"] = json!(desc);
             }
             let result = client.post(&path, &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "workspace");
         }
         WorkspacesAction::Update(a) => {
             let path = format!(
@@ -154,7 +154,7 @@ pub async fn handle(args: WorkspacesArgs, client: &GtmApiClient, format: &Output
                 body["description"] = json!(desc);
             }
             let result = client.put(&path, &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "workspace");
         }
         WorkspacesAction::Delete(a) => {
             let path = format!(
@@ -170,7 +170,7 @@ pub async fn handle(args: WorkspacesArgs, client: &GtmApiClient, format: &Output
                 a.ws.account_id, a.ws.container_id, a.ws.workspace_id
             );
             let result = client.get(&path).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "workspace");
         }
         WorkspacesAction::Sync(a) => {
             let path = format!(
@@ -178,7 +178,7 @@ pub async fn handle(args: WorkspacesArgs, client: &GtmApiClient, format: &Output
                 a.ws.account_id, a.ws.container_id, a.ws.workspace_id
             );
             let result = client.post(&path, &json!({})).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "workspace");
         }
         WorkspacesAction::CreateVersion(a) => {
             let path = format!(
@@ -193,7 +193,7 @@ pub async fn handle(args: WorkspacesArgs, client: &GtmApiClient, format: &Output
                 body["notes"] = json!(notes);
             }
             let result = client.post(&path, &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "workspace");
         }
         WorkspacesAction::QuickPreview(a) => {
             let path = format!(
@@ -201,7 +201,7 @@ pub async fn handle(args: WorkspacesArgs, client: &GtmApiClient, format: &Output
                 a.ws.account_id, a.ws.container_id, a.ws.workspace_id
             );
             let result = client.post(&path, &json!({})).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "workspace");
         }
     }
     Ok(())

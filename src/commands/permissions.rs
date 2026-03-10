@@ -3,7 +3,7 @@ use serde_json::json;
 
 use crate::api::client::GtmApiClient;
 use crate::error::{GtmError, Result};
-use crate::output::formatter::{print_output, OutputFormat};
+use crate::output::formatter::{print_resource, OutputFormat};
 
 #[derive(Args)]
 pub struct PermissionsArgs {
@@ -80,7 +80,7 @@ pub async fn handle(args: PermissionsArgs, client: &GtmApiClient, format: &Outpu
         PermissionsAction::List(a) => {
             let path = format!("accounts/{}/user_permissions", a.account_id);
             let result = client.get(&path).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "permissions");
         }
         PermissionsAction::Get(a) => {
             let path = format!(
@@ -88,7 +88,7 @@ pub async fn handle(args: PermissionsArgs, client: &GtmApiClient, format: &Outpu
                 a.account_id, a.permission_id
             );
             let result = client.get(&path).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "permission");
         }
         PermissionsAction::Create(a) => {
             let path = format!("accounts/{}/user_permissions", a.account_id);
@@ -102,7 +102,7 @@ pub async fn handle(args: PermissionsArgs, client: &GtmApiClient, format: &Outpu
                 body["containerAccess"] = parsed;
             }
             let result = client.post(&path, &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "permission");
         }
         PermissionsAction::Update(a) => {
             let path = format!(
@@ -119,7 +119,7 @@ pub async fn handle(args: PermissionsArgs, client: &GtmApiClient, format: &Outpu
                 body["containerAccess"] = parsed;
             }
             let result = client.put(&path, &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "permission");
         }
         PermissionsAction::Delete(a) => {
             let path = format!(

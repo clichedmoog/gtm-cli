@@ -5,7 +5,7 @@ use crate::api::client::GtmApiClient;
 use crate::api::params::{self, params_from_json};
 use crate::api::workspace::resolve_workspace;
 use crate::error::{GtmError, Result};
-use crate::output::formatter::{print_output, OutputFormat};
+use crate::output::formatter::{print_resource, OutputFormat};
 
 #[derive(Args)]
 pub struct VariablesArgs {
@@ -114,12 +114,12 @@ pub async fn handle(args: VariablesArgs, client: &GtmApiClient, format: &OutputF
         VariablesAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/variables")).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "variables");
         }
         VariablesAction::Get(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/variables/{}", a.variable_id)).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "variable");
         }
         VariablesAction::Create(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -142,7 +142,7 @@ pub async fn handle(args: VariablesArgs, client: &GtmApiClient, format: &OutputF
             }
 
             let result = client.post(&format!("{base}/variables"), &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "variable");
         }
         VariablesAction::Update(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -164,7 +164,7 @@ pub async fn handle(args: VariablesArgs, client: &GtmApiClient, format: &OutputF
                 }]);
             }
             let result = client.put(&format!("{base}/variables/{}", a.variable_id), &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "variable");
         }
         VariablesAction::Delete(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -176,7 +176,7 @@ pub async fn handle(args: VariablesArgs, client: &GtmApiClient, format: &OutputF
             let result = client
                 .post(&format!("{base}/variables/{}:revert", a.variable_id), &json!({}))
                 .await?;
-            print_output(&result, format);
+            print_resource(&result, format, "variable");
         }
     }
     Ok(())

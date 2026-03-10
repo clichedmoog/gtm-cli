@@ -4,7 +4,7 @@ use serde_json::json;
 use crate::api::client::GtmApiClient;
 use crate::api::workspace::resolve_workspace;
 use crate::error::Result;
-use crate::output::formatter::{print_output, OutputFormat};
+use crate::output::formatter::{print_resource, OutputFormat};
 
 #[derive(Args)]
 pub struct BuiltinVariablesArgs {
@@ -78,7 +78,7 @@ pub async fn handle(args: BuiltinVariablesArgs, client: &GtmApiClient, format: &
         BuiltinVariablesAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/built_in_variables")).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "built_in_variables");
         }
         BuiltinVariablesAction::Create(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -91,7 +91,7 @@ pub async fn handle(args: BuiltinVariablesArgs, client: &GtmApiClient, format: &
             let result = client
                 .post_with_query(&format!("{base}/built_in_variables"), &query, &json!({}))
                 .await?;
-            print_output(&result, format);
+            print_resource(&result, format, "built_in_variables");
         }
         BuiltinVariablesAction::Delete(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -110,7 +110,7 @@ pub async fn handle(args: BuiltinVariablesArgs, client: &GtmApiClient, format: &
             let result = client
                 .post(&format!("{base}/built_in_variables:revert"), &json!({}))
                 .await?;
-            print_output(&result, format);
+            print_resource(&result, format, "built_in_variables");
         }
     }
     Ok(())

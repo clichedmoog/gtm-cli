@@ -3,7 +3,7 @@ use serde_json::json;
 
 use crate::api::client::GtmApiClient;
 use crate::error::Result;
-use crate::output::formatter::{print_output, OutputFormat};
+use crate::output::formatter::{print_resource, OutputFormat};
 
 #[derive(Args)]
 pub struct VersionsArgs {
@@ -117,11 +117,11 @@ pub async fn handle(args: VersionsArgs, client: &GtmApiClient, format: &OutputFo
         VersionsAction::List(a) => {
             let path = format!("{}/versions", container_path(&a.c));
             let result = client.get(&path).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "versions");
         }
         VersionsAction::Get(a) => {
             let result = client.get(&version_path(&a.v)).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "version");
         }
         VersionsAction::Update(a) => {
             let mut body = json!({});
@@ -132,7 +132,7 @@ pub async fn handle(args: VersionsArgs, client: &GtmApiClient, format: &OutputFo
                 body["notes"] = json!(notes);
             }
             let result = client.put(&version_path(&a.v), &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "version");
         }
         VersionsAction::Delete(a) => {
             client.delete(&version_path(&a.v)).await?;
@@ -141,22 +141,22 @@ pub async fn handle(args: VersionsArgs, client: &GtmApiClient, format: &OutputFo
         VersionsAction::Undelete(a) => {
             let path = format!("{}:undelete", version_path(&a.v));
             let result = client.post(&path, &json!({})).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "version");
         }
         VersionsAction::SetLatest(a) => {
             let path = format!("{}:set_latest", version_path(&a.v));
             let result = client.post(&path, &json!({})).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "version");
         }
         VersionsAction::Live(a) => {
             let path = format!("{}/versions:live", container_path(&a.c));
             let result = client.get(&path).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "version");
         }
         VersionsAction::Publish(a) => {
             let path = format!("{}:publish", version_path(&a.v));
             let result = client.post(&path, &json!({})).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "version");
         }
     }
     Ok(())

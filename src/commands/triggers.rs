@@ -4,7 +4,7 @@ use serde_json::json;
 use crate::api::client::GtmApiClient;
 use crate::api::workspace::resolve_workspace;
 use crate::error::{GtmError, Result};
-use crate::output::formatter::{print_output, OutputFormat};
+use crate::output::formatter::{print_resource, OutputFormat};
 
 #[derive(Args)]
 pub struct TriggersArgs {
@@ -111,12 +111,12 @@ pub async fn handle(args: TriggersArgs, client: &GtmApiClient, format: &OutputFo
         TriggersAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/triggers")).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "triggers");
         }
         TriggersAction::Get(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/triggers/{}", a.trigger_id)).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "trigger");
         }
         TriggersAction::Create(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -139,7 +139,7 @@ pub async fn handle(args: TriggersArgs, client: &GtmApiClient, format: &OutputFo
                 body["filter"] = parsed;
             }
             let result = client.post(&format!("{base}/triggers"), &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "trigger");
         }
         TriggersAction::Update(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -153,7 +153,7 @@ pub async fn handle(args: TriggersArgs, client: &GtmApiClient, format: &OutputFo
                 body["filter"] = parsed;
             }
             let result = client.put(&format!("{base}/triggers/{}", a.trigger_id), &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "trigger");
         }
         TriggersAction::Delete(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -165,7 +165,7 @@ pub async fn handle(args: TriggersArgs, client: &GtmApiClient, format: &OutputFo
             let result = client
                 .post(&format!("{base}/triggers/{}:revert", a.trigger_id), &json!({}))
                 .await?;
-            print_output(&result, format);
+            print_resource(&result, format, "trigger");
         }
     }
     Ok(())

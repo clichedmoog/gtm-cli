@@ -4,7 +4,7 @@ use serde_json::json;
 use crate::api::client::GtmApiClient;
 use crate::api::workspace::resolve_workspace;
 use crate::error::Result;
-use crate::output::formatter::{print_output, OutputFormat};
+use crate::output::formatter::{print_resource, OutputFormat};
 
 #[derive(Args)]
 pub struct TemplatesArgs {
@@ -124,12 +124,12 @@ pub async fn handle(args: TemplatesArgs, client: &GtmApiClient, format: &OutputF
         TemplatesAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/templates")).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "templates");
         }
         TemplatesAction::Get(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/templates/{}", a.template_id)).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "template");
         }
         TemplatesAction::Create(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -145,7 +145,7 @@ pub async fn handle(args: TemplatesArgs, client: &GtmApiClient, format: &OutputF
                 }
             }
             let result = client.post(&format!("{base}/templates"), &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "template");
         }
         TemplatesAction::Update(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -163,7 +163,7 @@ pub async fn handle(args: TemplatesArgs, client: &GtmApiClient, format: &OutputF
                 }
             }
             let result = client.put(&format!("{base}/templates/{}", a.template_id), &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "template");
         }
         TemplatesAction::Delete(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -175,7 +175,7 @@ pub async fn handle(args: TemplatesArgs, client: &GtmApiClient, format: &OutputF
             let result = client
                 .post(&format!("{base}/templates/{}:revert", a.template_id), &json!({}))
                 .await?;
-            print_output(&result, format);
+            print_resource(&result, format, "template");
         }
         TemplatesAction::Import(a) => {
             let base = workspace_path(&a.ws, client).await?;
@@ -189,7 +189,7 @@ pub async fn handle(args: TemplatesArgs, client: &GtmApiClient, format: &OutputF
             });
             let path = format!("{base}/templates:importFromGallery");
             let result = client.post(&path, &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "template");
         }
     }
     Ok(())

@@ -3,7 +3,7 @@ use serde_json::json;
 
 use crate::api::client::GtmApiClient;
 use crate::error::Result;
-use crate::output::formatter::{print_output, OutputFormat};
+use crate::output::formatter::{print_resource, OutputFormat};
 
 #[derive(Args)]
 pub struct EnvironmentsArgs {
@@ -109,11 +109,11 @@ pub async fn handle(args: EnvironmentsArgs, client: &GtmApiClient, format: &Outp
                 a.c.account_id, a.c.container_id
             );
             let result = client.get(&path).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "environments");
         }
         EnvironmentsAction::Get(a) => {
             let result = client.get(&env_path(&a.e)).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "environment");
         }
         EnvironmentsAction::Create(a) => {
             let path = format!(
@@ -128,7 +128,7 @@ pub async fn handle(args: EnvironmentsArgs, client: &GtmApiClient, format: &Outp
                 body["enableDebug"] = json!(debug);
             }
             let result = client.post(&path, &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "environment");
         }
         EnvironmentsAction::Update(a) => {
             let mut body = json!({});
@@ -142,7 +142,7 @@ pub async fn handle(args: EnvironmentsArgs, client: &GtmApiClient, format: &Outp
                 body["enableDebug"] = json!(debug);
             }
             let result = client.put(&env_path(&a.e), &body).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "environment");
         }
         EnvironmentsAction::Delete(a) => {
             client.delete(&env_path(&a.e)).await?;
@@ -151,7 +151,7 @@ pub async fn handle(args: EnvironmentsArgs, client: &GtmApiClient, format: &Outp
         EnvironmentsAction::Reauthorize(a) => {
             let path = format!("{}:reauthorize", env_path(&a.e));
             let result = client.post(&path, &json!({})).await?;
-            print_output(&result, format);
+            print_resource(&result, format, "environment");
         }
     }
     Ok(())

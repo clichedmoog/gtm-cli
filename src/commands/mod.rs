@@ -17,3 +17,4 @@ pub mod versions;
 pub mod workspaces;
 pub mod setup;
 pub mod zones;
+pub mod completions;
