@@ -75,6 +75,26 @@ impl GtmApiClient {
         Self::handle_response(resp).await
     }
 
+    /// DELETE with query parameters
+    pub async fn delete_with_query(&self, path: &str, query: &[(&str, &str)]) -> Result<()> {
+        let url = format!("{API_BASE}/{path}");
+        let auth = self.auth_header().await?;
+        let resp = self
+            .http
+            .delete(&url)
+            .header("Authorization", &auth)
+            .query(query)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let status = resp.status().as_u16();
+            let message = Self::extract_error_message(resp).await;
+            return Err(GtmError::ApiError { status, message });
+        }
+        Ok(())
+    }
+
     pub async fn delete(&self, path: &str) -> Result<()> {
         let url = format!("{API_BASE}/{path}");
         let auth = self.auth_header().await?;

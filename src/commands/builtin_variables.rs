@@ -100,29 +100,9 @@ pub async fn handle(args: BuiltinVariablesArgs, client: &GtmApiClient, format: &
                 .iter()
                 .map(|t| ("type", t.as_str()))
                 .collect();
-            // DELETE with query params - need to use raw request
-            let url = format!(
-                "{}/{base}/built_in_variables",
-                crate::config::API_BASE
-            );
-            let token = crate::auth::oauth::ensure_valid_token(
-                &crate::config::Config::load(),
-            )
-            .await?;
-            let resp = reqwest::Client::new()
-                .delete(&url)
-                .header("Authorization", format!("Bearer {token}"))
-                .query(&query)
-                .send()
+            client
+                .delete_with_query(&format!("{base}/built_in_variables"), &query)
                 .await?;
-            if !resp.status().is_success() {
-                let status = resp.status().as_u16();
-                let body = resp.text().await.unwrap_or_default();
-                return Err(crate::error::GtmError::ApiError {
-                    status,
-                    message: body,
-                });
-            }
             eprintln!("Built-in variables disabled successfully.");
         }
         BuiltinVariablesAction::Revert(a) => {
