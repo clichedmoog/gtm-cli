@@ -1,12 +1,16 @@
 {
-  "name": "@clichedmoog/gtm",
+  "name": "gtm-cli",
   "version": "0.1.0",
   "description": "Google Tag Manager CLI — built for humans and AI agents",
   "bin": {
     "gtm": "bin/gtm"
   },
+  "scripts": {
+    "postinstall": "node install.js"
+  },
   "files": [
-    "bin/"
+    "bin/",
+    "install.js"
   ],
   "repository": {
     "type": "git",
@@ -25,11 +29,6 @@
     "url": "https://github.com/clichedmoog/gtm-cli/issues"
   },
   "homepage": "https://github.com/clichedmoog/gtm-cli#readme",
-  "os": [
-    "linux",
-    "darwin",
-    "win32"
-  ],
   "engines": {
     "node": ">=18"
   }

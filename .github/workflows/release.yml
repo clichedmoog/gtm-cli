@@ -101,17 +101,14 @@ jobs:
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
 
-      - name: Prepare npm package
+      - name: Set npm version from tag
         run: |
-          mkdir -p npm/bin
-          # Extract linux x64 binary as default
-          tar xzf artifacts/gtm-x86_64-unknown-linux-gnu.tar.gz -C npm/bin/
-          chmod +x npm/bin/gtm
+          VERSION="${GITHUB_REF_NAME#v}"
+          cd npm && npm version "$VERSION" --no-git-tag-version
+
+      - name: Create bin directory
+        run: mkdir -p npm/bin
 
       - name: Publish to npm
         run: cd npm && npm publish --access public
