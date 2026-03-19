@@ -88,6 +88,9 @@ pub struct TriggersDeleteArgs {
     ws: WorkspaceFlags,
     #[arg(long)]
     trigger_id: String,
+    /// Required to confirm deletion
+    #[arg(long)]
+    force: bool,
 }
 
 #[derive(Args)]
@@ -169,6 +172,11 @@ pub async fn handle(
             print_resource(&result, format, "trigger");
         }
         TriggersAction::Delete(a) => {
+            if !a.force {
+                eprintln!("WARNING: This will permanently delete trigger '{}'.", a.trigger_id);
+                eprintln!("Run the same command with --force to confirm.");
+                return Ok(());
+            }
             let base = workspace_path(&a.ws, client).await?;
             client
                 .delete(&format!("{base}/triggers/{}", a.trigger_id))

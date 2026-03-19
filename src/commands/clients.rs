@@ -83,6 +83,9 @@ pub struct ClientsDeleteArgs {
     ws: WorkspaceFlags,
     #[arg(long)]
     client_id: String,
+    /// Required to confirm deletion
+    #[arg(long)]
+    force: bool,
 }
 
 #[derive(Args)]
@@ -151,6 +154,11 @@ pub async fn handle(args: ClientsArgs, client: &GtmApiClient, format: &OutputFor
             print_resource(&result, format, "client");
         }
         ClientsAction::Delete(a) => {
+            if !a.force {
+                eprintln!("WARNING: This will permanently delete client '{}'.", a.client_id);
+                eprintln!("Run the same command with --force to confirm.");
+                return Ok(());
+            }
             let base = workspace_path(&a.ws, client).await?;
             client
                 .delete(&format!("{base}/clients/{}", a.client_id))

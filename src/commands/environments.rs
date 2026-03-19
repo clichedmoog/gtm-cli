@@ -86,6 +86,9 @@ pub struct EnvUpdateArgs {
 pub struct EnvDeleteArgs {
     #[command(flatten)]
     e: EnvFlags,
+    /// Required to confirm deletion
+    #[arg(long)]
+    force: bool,
 }
 
 #[derive(Args)]
@@ -150,6 +153,11 @@ pub async fn handle(
             print_resource(&result, format, "environment");
         }
         EnvironmentsAction::Delete(a) => {
+            if !a.force {
+                eprintln!("WARNING: This will permanently delete environment '{}'.", a.e.environment_id);
+                eprintln!("Run the same command with --force to confirm.");
+                return Ok(());
+            }
             client.delete(&env_path(&a.e)).await?;
             crate::output::formatter::print_deleted("environment", &a.e.environment_id);
         }

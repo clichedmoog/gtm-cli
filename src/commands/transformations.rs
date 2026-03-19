@@ -83,6 +83,9 @@ pub struct TransformationsDeleteArgs {
     ws: WorkspaceFlags,
     #[arg(long)]
     transformation_id: String,
+    /// Required to confirm deletion
+    #[arg(long)]
+    force: bool,
 }
 
 #[derive(Args)]
@@ -157,6 +160,11 @@ pub async fn handle(
             print_resource(&result, format, "transformation");
         }
         TransformationsAction::Delete(a) => {
+            if !a.force {
+                eprintln!("WARNING: This will permanently delete transformation '{}'.", a.transformation_id);
+                eprintln!("Run the same command with --force to confirm.");
+                return Ok(());
+            }
             let base = workspace_path(&a.ws, client).await?;
             client
                 .delete(&format!("{base}/transformations/{}", a.transformation_id))

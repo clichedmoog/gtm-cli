@@ -82,6 +82,9 @@ pub struct GtagDeleteArgs {
     ws: WorkspaceFlags,
     #[arg(long)]
     gtag_config_id: String,
+    /// Required to confirm deletion
+    #[arg(long)]
+    force: bool,
 }
 
 #[derive(Args)]
@@ -154,6 +157,11 @@ pub async fn handle(
             print_resource(&result, format, "gtag_config");
         }
         GtagConfigsAction::Delete(a) => {
+            if !a.force {
+                eprintln!("WARNING: This will permanently delete gtag config '{}'.", a.gtag_config_id);
+                eprintln!("Run the same command with --force to confirm.");
+                return Ok(());
+            }
             let base = workspace_path(&a.ws, client).await?;
             client
                 .delete(&format!("{base}/gtag_config/{}", a.gtag_config_id))

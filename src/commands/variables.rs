@@ -91,6 +91,9 @@ pub struct VariablesDeleteArgs {
     ws: WorkspaceFlags,
     #[arg(long)]
     variable_id: String,
+    /// Required to confirm deletion
+    #[arg(long)]
+    force: bool,
 }
 
 #[derive(Args)]
@@ -180,6 +183,11 @@ pub async fn handle(
             print_resource(&result, format, "variable");
         }
         VariablesAction::Delete(a) => {
+            if !a.force {
+                eprintln!("WARNING: This will permanently delete variable '{}'.", a.variable_id);
+                eprintln!("Run the same command with --force to confirm.");
+                return Ok(());
+            }
             let base = workspace_path(&a.ws, client).await?;
             client
                 .delete(&format!("{base}/variables/{}", a.variable_id))

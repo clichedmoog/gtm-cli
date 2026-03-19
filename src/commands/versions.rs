@@ -75,6 +75,9 @@ pub struct VersionsUpdateArgs {
 pub struct VersionsDeleteArgs {
     #[command(flatten)]
     v: VersionFlags,
+    /// Required to confirm deletion
+    #[arg(long)]
+    force: bool,
 }
 
 #[derive(Args)]
@@ -140,6 +143,11 @@ pub async fn handle(
             print_resource(&result, format, "version");
         }
         VersionsAction::Delete(a) => {
+            if !a.force {
+                eprintln!("WARNING: This will permanently delete version '{}'.", a.v.version_id);
+                eprintln!("Run the same command with --force to confirm.");
+                return Ok(());
+            }
             client.delete(&version_path(&a.v)).await?;
             crate::output::formatter::print_deleted("version", &a.v.version_id);
         }

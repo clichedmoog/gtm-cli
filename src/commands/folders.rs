@@ -84,6 +84,9 @@ pub struct FoldersDeleteArgs {
     ws: WorkspaceFlags,
     #[arg(long)]
     folder_id: String,
+    /// Required to confirm deletion
+    #[arg(long)]
+    force: bool,
 }
 
 #[derive(Args)]
@@ -171,6 +174,11 @@ pub async fn handle(args: FoldersArgs, client: &GtmApiClient, format: &OutputFor
             print_resource(&result, format, "folder");
         }
         FoldersAction::Delete(a) => {
+            if !a.force {
+                eprintln!("WARNING: This will permanently delete folder '{}'.", a.folder_id);
+                eprintln!("Run the same command with --force to confirm.");
+                return Ok(());
+            }
             let base = workspace_path(&a.ws, client).await?;
             client
                 .delete(&format!("{base}/folders/{}", a.folder_id))

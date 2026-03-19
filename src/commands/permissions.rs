@@ -73,6 +73,9 @@ pub struct PermissionsDeleteArgs {
     account_id: String,
     #[arg(long)]
     permission_id: String,
+    /// Required to confirm deletion
+    #[arg(long)]
+    force: bool,
 }
 
 pub async fn handle(
@@ -126,6 +129,11 @@ pub async fn handle(
             print_resource(&result, format, "permission");
         }
         PermissionsAction::Delete(a) => {
+            if !a.force {
+                eprintln!("WARNING: This will permanently delete permission '{}'.", a.permission_id);
+                eprintln!("Run the same command with --force to confirm.");
+                return Ok(());
+            }
             let path = format!(
                 "accounts/{}/user_permissions/{}",
                 a.account_id, a.permission_id

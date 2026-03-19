@@ -22,7 +22,7 @@ pub enum ContainersAction {
     /// Update a container
     Update(ContainerUpdateArgs),
     /// Delete a container
-    Delete(ContainerIdArgs),
+    Delete(ContainerDeleteArgs),
     /// Get container installation snippet
     Snippet(ContainerIdArgs),
     /// Lookup container by public ID (GTM-XXXXX)
@@ -66,6 +66,17 @@ pub struct ContainerUpdateArgs {
 }
 
 #[derive(Args)]
+#[derive(Args)]
+pub struct ContainerDeleteArgs {
+    #[arg(long, env = "GTM_ACCOUNT_ID")]
+    pub account_id: String,
+    #[arg(long, env = "GTM_CONTAINER_ID")]
+    pub container_id: String,
+    /// Required to confirm deletion
+    #[arg(long)]
+    pub force: bool,
+}
+
 pub struct ContainerLookupArgs {
     /// Public container ID (e.g., GTM-XXXXX)
     #[arg(long)]
@@ -107,6 +118,11 @@ pub async fn handle(
             print_resource(&result, format, "container");
         }
         ContainersAction::Delete(a) => {
+            if !a.force {
+                eprintln!("WARNING: This will permanently delete container '{}'.", a.container_id);
+                eprintln!("Run the same command with --force to confirm.");
+                return Ok(());
+            }
             let path = format!("accounts/{}/containers/{}", a.account_id, a.container_id);
             client.delete(&path).await?;
             crate::output::formatter::print_deleted("container", &a.container_id);

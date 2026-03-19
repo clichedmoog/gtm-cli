@@ -98,6 +98,9 @@ pub struct TagsDeleteArgs {
     pub ws: WorkspaceFlags,
     #[arg(long)]
     pub tag_id: String,
+    /// Required to confirm deletion
+    #[arg(long)]
+    pub force: bool,
 }
 
 #[derive(Args)]
@@ -185,6 +188,11 @@ pub async fn handle(args: TagsArgs, client: &GtmApiClient, format: &OutputFormat
             print_resource(&result, format, "tag");
         }
         TagsAction::Delete(a) => {
+            if !a.force {
+                eprintln!("WARNING: This will permanently delete tag '{}'.", a.tag_id);
+                eprintln!("Run the same command with --force to confirm.");
+                return Ok(());
+            }
             let base = workspace_path(&a.ws, client).await?;
             client.delete(&format!("{base}/tags/{}", a.tag_id)).await?;
             crate::output::formatter::print_deleted("tag", &a.tag_id);

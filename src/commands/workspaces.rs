@@ -94,6 +94,9 @@ pub struct WorkspaceUpdateArgs {
 pub struct WorkspaceDeleteArgs {
     #[command(flatten)]
     ws: WorkspaceFlags,
+    /// Required to confirm deletion
+    #[arg(long)]
+    force: bool,
 }
 
 #[derive(Args)]
@@ -200,6 +203,11 @@ pub async fn handle(
             print_resource(&result, format, "workspace");
         }
         WorkspacesAction::Delete(a) => {
+            if !a.force {
+                eprintln!("WARNING: This will permanently delete workspace '{}'.", a.ws.workspace_id);
+                eprintln!("Run the same command with --force to confirm.");
+                return Ok(());
+            }
             let path = format!(
                 "accounts/{}/containers/{}/workspaces/{}",
                 a.ws.account_id, a.ws.container_id, a.ws.workspace_id
