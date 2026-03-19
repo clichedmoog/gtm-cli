@@ -131,6 +131,11 @@ fn columns_for(hint: &str) -> ColumnSpec {
             ("type", "Type"),
         ],
         "zones" | "zone" => &[("zoneId", "ID"), ("name", "Name")],
+        "destinations" | "destination" => &[
+            ("destinationId", "ID"),
+            ("name", "Name"),
+            ("destinationLinkId", "Link ID"),
+        ],
         "built_in_variables" | "builtInVariable" => &[("name", "Name"), ("type", "Type")],
         _ => &[("name", "Name"), ("type", "Type"), ("path", "Path")],
     }
