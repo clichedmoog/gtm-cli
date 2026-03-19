@@ -1,4 +1,5 @@
 mod api;
+mod app_config;
 mod auth;
 mod commands;
 mod config;
@@ -8,6 +9,7 @@ mod output;
 use clap::{Parser, Subcommand};
 
 use api::client::GtmApiClient;
+use app_config::AppConfig;
 use config::Config;
 use output::formatter::OutputFormat;
 
@@ -18,8 +20,8 @@ pub struct Cli {
     command: Commands,
 
     /// Output format
-    #[arg(long, global = true, default_value = "json")]
-    format: OutputFormat,
+    #[arg(long, global = true)]
+    format: Option<OutputFormat>,
 
     /// Show what would be done without making changes
     #[arg(long, global = true)]
@@ -30,6 +32,8 @@ pub struct Cli {
 enum Commands {
     /// Authenticate with Google
     Auth(commands::auth::AuthArgs),
+    /// Manage configuration defaults
+    Config(commands::config::ConfigArgs),
     /// Manage GTM accounts
     Accounts(commands::accounts::AccountsArgs),
     /// Manage GTM containers
@@ -64,6 +68,8 @@ enum Commands {
     Zones(commands::zones::ZonesArgs),
     /// Manage built-in variables
     BuiltinVariables(commands::builtin_variables::BuiltinVariablesArgs),
+    /// Manage GTM destinations
+    Destinations(commands::destinations::DestinationsArgs),
     /// Quick setup workflows (GA4, Facebook Pixel, etc.)
     Setup(commands::setup::SetupArgs),
     /// Generate shell completions
@@ -75,61 +81,90 @@ async fn main() {
     let cli = Cli::parse();
     let config = Config::load();
 
+    // Resolve output format: CLI flag > app_config > default (json)
+    let app_config = AppConfig::load(&Config::config_dir().join("config.json"));
+    let format = cli.format.unwrap_or_else(|| {
+        app_config
+            .output_format
+            .as_deref()
+            .and_then(|s| match s {
+                "json" => Some(OutputFormat::Json),
+                "table" => Some(OutputFormat::Table),
+                _ => None,
+            })
+            .unwrap_or(OutputFormat::Json)
+    });
+
     let result = match cli.command {
         Commands::Auth(args) => commands::auth::handle(args, &config).await,
         Commands::Completions(args) => commands::completions::handle(args),
+        Commands::Config(args) => {
+            // Setup needs a client; get/set/unset don't
+            let needs_client = matches!(args.action, commands::config::ConfigAction::Setup);
+            if needs_client {
+                let client = GtmApiClient::new(config.clone(), cli.dry_run);
+                commands::config::handle(args, Some(&client), &config, &format).await
+            } else {
+                commands::config::handle(args, None, &config, &format).await
+            }
+        }
         _ => {
             let client = GtmApiClient::new(config, cli.dry_run);
             match cli.command {
-                Commands::Auth(_) | Commands::Completions(_) => unreachable!(),
+                Commands::Auth(_) | Commands::Completions(_) | Commands::Config(_) => {
+                    unreachable!()
+                }
                 Commands::Accounts(args) => {
-                    commands::accounts::handle(args, &client, &cli.format).await
+                    commands::accounts::handle(args, &client, &format).await
                 }
                 Commands::Containers(args) => {
-                    commands::containers::handle(args, &client, &cli.format).await
+                    commands::containers::handle(args, &client, &format).await
                 }
                 Commands::Workspaces(args) => {
-                    commands::workspaces::handle(args, &client, &cli.format).await
+                    commands::workspaces::handle(args, &client, &format).await
                 }
-                Commands::Tags(args) => commands::tags::handle(args, &client, &cli.format).await,
+                Commands::Tags(args) => commands::tags::handle(args, &client, &format).await,
                 Commands::Triggers(args) => {
-                    commands::triggers::handle(args, &client, &cli.format).await
+                    commands::triggers::handle(args, &client, &format).await
                 }
                 Commands::Variables(args) => {
-                    commands::variables::handle(args, &client, &cli.format).await
+                    commands::variables::handle(args, &client, &format).await
                 }
                 Commands::Folders(args) => {
-                    commands::folders::handle(args, &client, &cli.format).await
+                    commands::folders::handle(args, &client, &format).await
                 }
                 Commands::Templates(args) => {
-                    commands::templates::handle(args, &client, &cli.format).await
+                    commands::templates::handle(args, &client, &format).await
                 }
                 Commands::Versions(args) => {
-                    commands::versions::handle(args, &client, &cli.format).await
+                    commands::versions::handle(args, &client, &format).await
                 }
                 Commands::VersionHeaders(args) => {
-                    commands::version_headers::handle(args, &client, &cli.format).await
+                    commands::version_headers::handle(args, &client, &format).await
                 }
                 Commands::Environments(args) => {
-                    commands::environments::handle(args, &client, &cli.format).await
+                    commands::environments::handle(args, &client, &format).await
                 }
                 Commands::Permissions(args) => {
-                    commands::permissions::handle(args, &client, &cli.format).await
+                    commands::permissions::handle(args, &client, &format).await
                 }
                 Commands::Clients(args) => {
-                    commands::clients::handle(args, &client, &cli.format).await
+                    commands::clients::handle(args, &client, &format).await
                 }
                 Commands::GtagConfigs(args) => {
-                    commands::gtag_configs::handle(args, &client, &cli.format).await
+                    commands::gtag_configs::handle(args, &client, &format).await
                 }
                 Commands::Transformations(args) => {
-                    commands::transformations::handle(args, &client, &cli.format).await
+                    commands::transformations::handle(args, &client, &format).await
                 }
-                Commands::Zones(args) => commands::zones::handle(args, &client, &cli.format).await,
+                Commands::Zones(args) => commands::zones::handle(args, &client, &format).await,
                 Commands::BuiltinVariables(args) => {
-                    commands::builtin_variables::handle(args, &client, &cli.format).await
+                    commands::builtin_variables::handle(args, &client, &format).await
                 }
-                Commands::Setup(args) => commands::setup::handle(args, &client, &cli.format).await,
+                Commands::Destinations(args) => {
+                    commands::destinations::handle(args, &client, &format).await
+                }
+                Commands::Setup(args) => commands::setup::handle(args, &client, &format).await,
             }
         }
     };
