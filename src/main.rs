@@ -103,7 +103,9 @@ async fn main() {
         std::env::set_var("GTM_QUIET", "1");
     }
 
-    // Resolve output format: CLI flag > app_config > default (json)
+    // Resolve output format: CLI flag > app_config > auto-detect
+    // When piped (non-TTY stdout), default to JSON for scripting
+    use std::io::IsTerminal;
     let app_config = AppConfig::load(&Config::config_dir().join("config.json"));
     let format = cli.format.unwrap_or_else(|| {
         app_config
@@ -115,7 +117,13 @@ async fn main() {
                 "compact" => Some(OutputFormat::Compact),
                 _ => None,
             })
-            .unwrap_or(OutputFormat::Json)
+            .unwrap_or_else(|| {
+                if std::io::stdout().is_terminal() {
+                    OutputFormat::Table
+                } else {
+                    OutputFormat::Json
+                }
+            })
     });
 
     let result = match cli.command {
