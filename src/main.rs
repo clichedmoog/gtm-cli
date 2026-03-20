@@ -26,6 +26,14 @@ pub struct Cli {
     /// Show what would be done without making changes
     #[arg(long, global = true)]
     dry_run: bool,
+
+    /// Suppress non-essential output
+    #[arg(long, short, global = true)]
+    quiet: bool,
+
+    /// Disable colored output
+    #[arg(long, global = true)]
+    no_color: bool,
 }
 
 #[derive(Subcommand)]
@@ -84,6 +92,16 @@ enum Commands {
 async fn main() {
     let cli = Cli::parse();
     let config = Config::load();
+
+    // Set NO_COLOR env var if --no-color flag is used (respected by comfy-table and others)
+    if cli.no_color || std::env::var("NO_COLOR").is_ok() {
+        std::env::set_var("NO_COLOR", "1");
+    }
+
+    // Set quiet mode via env var so handlers can check it
+    if cli.quiet {
+        std::env::set_var("GTM_QUIET", "1");
+    }
 
     // Resolve output format: CLI flag > app_config > default (json)
     let app_config = AppConfig::load(&Config::config_dir().join("config.json"));
