@@ -32,6 +32,7 @@ The binary is named `gtm` (configured in Cargo.toml `[[bin]]`).
   - `oauth.rs` — Full OAuth2 login (local HTTP server for redirect), token refresh, and `ensure_valid_token()` for auto-refresh.
   - `token_store.rs` — Reads/writes credentials and tokens from `~/.config/gtm/`.
 - **`src/config.rs`** — Config loading. Credentials/token paths from env vars (`GTM_CREDENTIALS_FILE`, `GTM_TOKEN_FILE`) or defaults under `~/.config/gtm/`.
+- **`src/update_check.rs`** — Background update checker. Runs via `tokio::spawn` on startup, checks GitHub releases once per day, caches result in `~/.config/gtm/update-check.json`. Uses `semver` crate for version comparison.
 - **`src/error.rs`** — `GtmError` enum using `thiserror`. `exit_with_message()` prints user-friendly errors.
 - **`src/output/`** — Output formatting with `--format json|table` (global flag, default json).
   - `formatter.rs` — Dispatches to JSON pretty-print or table rendering.
@@ -54,3 +55,10 @@ Every resource command follows the same structure. When adding a new resource:
 - **Workspace ID is optional** — if omitted, `resolve_workspace()` finds or creates one automatically.
 - **Parameters use `--params` as a JSON string** parsed into GTM's nested parameter format via `params_from_json()`.
 - **Global flags** (`--format`, `--dry-run`) are defined on the root `Cli` struct and threaded through to handlers.
+- **Testability** — `GtmApiClient` supports `GTM_API_BASE` env var to override the API base URL and bypasses real auth when set, enabling mock server testing with `wiremock`.
+
+### Test Structure
+
+- **`tests/mock_api.rs`** — 63 integration tests using `wiremock` to simulate GTM API responses. Covers all resource types, CRUD operations, pagination, dry-run, error handling, and output formats.
+- **`tests/cli_basic.rs`** — Basic CLI tests (help, version, completions, flag validation).
+- **`tests/integration.rs`** — Integration tests against real GTM API (ignored by default, requires credentials).

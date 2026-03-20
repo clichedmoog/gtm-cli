@@ -6,18 +6,46 @@ A command-line interface for the Google Tag Manager API v2 — built for humans 
 gtm <resource> <action> [flags]
 ```
 
+## Quick Start
+
+```bash
+# Install
+npm install -g gtmcli
+
+# Authenticate (opens browser)
+gtm auth login
+
+# Set defaults
+gtm config setup
+
+# List your tags
+gtm tags list
+
+# Create a GA4 tag
+gtm tags create --name "GA4 - Page View" --type gaawc \
+  --firing-trigger-id 2 \
+  --params '{"measurementId":"G-XXXXXXX"}'
+
+# One-command GA4 setup
+gtm setup ga4 --measurement-id G-XXXXXXX
+
+# Publish
+gtm versions create --name "v1.0" --notes "Initial release"
+gtm versions publish --version-id 1
+```
+
 ## Installation
+
+### npm (recommended)
+
+```bash
+npm install -g gtmcli
+```
 
 ### Quick Install (macOS / Linux)
 
 ```bash
 curl -fsSL https://github.com/clichedmoog/gtmcli/releases/latest/download/gtm-$(uname -m | sed 's/arm64/aarch64/')-apple-darwin.tar.gz | tar xz -C /usr/local/bin
-```
-
-### npm
-
-```bash
-npm install -g gtmcli
 ```
 
 ### Homebrew (coming soon)
@@ -34,20 +62,75 @@ cd gtmcli
 cargo install --path .
 ```
 
-## Quick Start
+## Usage Examples
+
+### Tags & Triggers
 
 ```bash
-# Authenticate with Google (opens browser)
-gtm auth login
-
-# Set default account/container
-gtm config setup
-
 # List tags
 gtm tags list
 
-# Create a GA4 tag
+# Create a Custom HTML tag
+gtm tags create --name "Tracking Pixel" --type html \
+  --firing-trigger-id 1 \
+  --params '{"html":"<img src=\"https://example.com/pixel\">"}'
+
+# Create a Custom Event trigger
+gtm triggers create --name "Button Click" --type customEvent \
+  --custom-event-filter "button_click"
+
+# Create a Data Layer variable
+gtm variables create --name "User ID" --type v --params '{"name":"userId"}'
+```
+
+### Quick Setup Workflows
+
+```bash
 gtm setup ga4 --measurement-id G-XXXXXXX
+gtm setup facebook-pixel --pixel-id 1234567890
+gtm setup form-tracking --measurement-id G-XXXXXXX
+```
+
+### Output Formats
+
+```bash
+# Table (default in terminal)
+gtm tags list
+
+# JSON (default when piped)
+gtm tags list | jq '.[].name'
+
+# Compact (ID + name only)
+gtm tags list --format compact
+```
+
+### Version Management
+
+```bash
+gtm versions create --name "v1.0" --notes "Initial release"
+gtm versions publish --version-id 1
+gtm versions live                  # Show live version
+```
+
+### Export & Import
+
+```bash
+gtm workspaces export -o backup.json
+gtm workspaces import -i backup.json
+```
+
+### Safety
+
+All delete commands require `--force`:
+
+```bash
+gtm tags delete --tag-id 42 --force
+```
+
+Use `--dry-run` to preview any changes:
+
+```bash
+gtm tags create --name "Test" --type html --dry-run
 ```
 
 ## Authentication
@@ -134,82 +217,6 @@ Environment variables take precedence:
 | `agent guide` | Documentation for AI agents |
 | `completions` | Generate shell completions |
 
-## Usage Examples
-
-### Output formats
-
-```bash
-# Table (default in terminal)
-gtm tags list
-
-# JSON (default when piped)
-gtm tags list | jq '.[].name'
-
-# Compact (ID + name only)
-gtm tags list --format compact
-```
-
-### Creating resources
-
-```bash
-# GA4 Event tag
-gtm tags create --name "GA4 - Button Click" --type gaawe \
-  --firing-trigger-id 2 \
-  --params '{"eventName":"button_click","measurementIdOverride":"G-XXXXXXX"}'
-
-# Custom Event trigger
-gtm triggers create --name "Button Click" --type customEvent \
-  --custom-event-filter "button_click"
-
-# Data Layer variable
-gtm variables create --name "User ID" --type v --params '{"name":"userId"}'
-```
-
-### Quick setup workflows
-
-```bash
-gtm setup ga4 --measurement-id G-XXXXXXX
-gtm setup facebook-pixel --pixel-id 1234567890
-gtm setup form-tracking --measurement-id G-XXXXXXX
-```
-
-### Export & import
-
-```bash
-gtm workspaces export -o backup.json
-gtm workspaces import -i backup.json
-```
-
-### Version management
-
-```bash
-gtm versions create --name "v1.0" --notes "Initial release"
-gtm versions publish --version-id 1
-gtm versions live
-```
-
-### Safety
-
-All delete commands require `--force`:
-
-```bash
-gtm tags delete --tag-id 42 --force
-```
-
-Use `--dry-run` to preview any changes:
-
-```bash
-gtm tags create --name "Test" --type html --dry-run
-```
-
-### Shell completions
-
-```bash
-gtm completions bash > ~/.local/share/bash-completion/completions/gtm
-gtm completions zsh > ~/.zfunc/_gtm
-gtm completions fish > ~/.config/fish/completions/gtm.fish
-```
-
 ## Entity Hierarchy
 
 ```
@@ -233,6 +240,25 @@ Account
   └── User Permission
 ```
 
+## Update Notifications
+
+The CLI automatically checks for new versions once a day (in the background, without blocking). If a newer version is available, a notification is shown:
+
+```
+  Update available: v0.1.0 → v0.2.0
+  Run `gtm upgrade` to update.
+```
+
+Use `--quiet` to suppress update notifications.
+
+## Shell Completions
+
+```bash
+gtm completions bash > ~/.local/share/bash-completion/completions/gtm
+gtm completions zsh > ~/.zfunc/_gtm
+gtm completions fish > ~/.config/fish/completions/gtm.fish
+```
+
 ## AI Agent Integration
 
 ```bash
@@ -245,7 +271,7 @@ The CLI outputs structured JSON by default when piped, making it ideal for autom
 
 ```bash
 cargo build              # Build
-cargo test               # Run tests
+cargo test               # Run tests (63 mock + 11 CLI tests)
 cargo clippy             # Lint
 cargo fmt                # Format
 cargo run -- <command>   # Run in dev mode
