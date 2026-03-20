@@ -29,8 +29,20 @@ struct VersionFlags {
     version_id: String,
 }
 
+#[derive(Args)]
+struct WorkspaceFlags {
+    #[arg(long, env = "GTM_ACCOUNT_ID")]
+    account_id: String,
+    #[arg(long, env = "GTM_CONTAINER_ID")]
+    container_id: String,
+    #[arg(long, env = "GTM_WORKSPACE_ID")]
+    workspace_id: String,
+}
+
 #[derive(Subcommand)]
 pub enum VersionsAction {
+    /// Create a new version from a workspace
+    Create(VersionsCreateArgs),
     /// List container versions
     List(VersionsListArgs),
     /// Get version details
@@ -47,6 +59,18 @@ pub enum VersionsAction {
     Live(VersionsLiveArgs),
     /// Publish a version
     Publish(VersionsPublishArgs),
+}
+
+#[derive(Args)]
+pub struct VersionsCreateArgs {
+    #[command(flatten)]
+    ws: WorkspaceFlags,
+    /// Version name
+    #[arg(long)]
+    name: Option<String>,
+    /// Version description/notes
+    #[arg(long)]
+    notes: Option<String>,
 }
 
 #[derive(Args)]
@@ -121,6 +145,21 @@ pub async fn handle(
     format: &OutputFormat,
 ) -> Result<()> {
     match args.action {
+        VersionsAction::Create(a) => {
+            let path = format!(
+                "accounts/{}/containers/{}/workspaces/{}:create_version",
+                a.ws.account_id, a.ws.container_id, a.ws.workspace_id
+            );
+            let mut body = json!({});
+            if let Some(name) = a.name {
+                body["name"] = json!(name);
+            }
+            if let Some(notes) = a.notes {
+                body["notes"] = json!(notes);
+            }
+            let result = client.post(&path, &body).await?;
+            print_resource(&result, format, "version");
+        }
         VersionsAction::List(a) => {
             let path = format!("{}/versions", container_path(&a.c));
             let result = client.get_all(&path).await?;
