@@ -5,6 +5,7 @@ mod commands;
 mod config;
 mod error;
 mod output;
+mod update_check;
 
 use clap::{Parser, Subcommand};
 
@@ -125,6 +126,11 @@ async fn main() {
                 }
             })
     });
+
+    // Background update check (skip for upgrade/completions commands, and quiet mode)
+    if !cli.quiet && !matches!(cli.command, Commands::Upgrade(_) | Commands::Completions(_)) {
+        update_check::check_for_updates();
+    }
 
     let result = match cli.command {
         Commands::Agent(args) => commands::agent::handle(args),
