@@ -172,9 +172,8 @@ pub async fn handle(args: TagsArgs, client: &GtmApiClient, format: &OutputFormat
             if let Some(name) = a.name {
                 body["name"] = json!(name);
             }
-            if let Some(params) = &a.params {
-                let raw: serde_json::Value = serde_json::from_str(params)
-                    .map_err(|_| GtmError::InvalidParams(params.clone()))?;
+            if a.params.is_some() {
+                let raw = parse_params(&a.params)?;
                 body["parameter"] = json!(params_from_json(&raw));
             }
             if !a.firing_trigger_id.is_empty() {

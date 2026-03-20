@@ -107,6 +107,7 @@ fn receive_auth_code(listener: TcpListener) -> Result<String> {
         html
     );
     stream.write_all(response.as_bytes())?;
+    stream.flush()?;
 
     Ok(code)
 }

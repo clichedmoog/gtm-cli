@@ -140,7 +140,7 @@ pub async fn handle(args: UpgradeArgs) -> Result<()> {
 
     // Extract
     if is_windows {
-        Command::new("powershell")
+        let status = Command::new("powershell")
             .args([
                 "-Command",
                 &format!(
@@ -151,8 +151,11 @@ pub async fn handle(args: UpgradeArgs) -> Result<()> {
             ])
             .status()
             .map_err(|e| GtmError::InvalidParams(format!("Extract failed: {e}")))?;
+        if !status.success() {
+            return Err(GtmError::InvalidParams("Archive extraction failed".into()));
+        }
     } else {
-        Command::new("tar")
+        let status = Command::new("tar")
             .args([
                 "xzf",
                 &archive_path.display().to_string(),
@@ -161,6 +164,9 @@ pub async fn handle(args: UpgradeArgs) -> Result<()> {
             ])
             .status()
             .map_err(|e| GtmError::InvalidParams(format!("Extract failed: {e}")))?;
+        if !status.success() {
+            return Err(GtmError::InvalidParams("Archive extraction failed".into()));
+        }
     }
 
     // Replace binary

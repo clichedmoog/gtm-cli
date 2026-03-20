@@ -36,7 +36,10 @@ pub async fn resolve_workspace(
     let id = created
         .get("workspaceId")
         .and_then(|v| v.as_str())
-        .unwrap_or("1")
+        .ok_or_else(|| crate::error::GtmError::ApiError {
+            status: 500,
+            message: "Created workspace response missing workspaceId".into(),
+        })?
         .to_string();
 
     Ok(id)

@@ -180,46 +180,51 @@ pub async fn handle(
             print_resource(&result, format, "container");
         }
         ContainersAction::Lookup(a) => {
-            let path = format!("accounts/containers:lookup?destinationId={}", a.public_id);
+            let encoded: String =
+                url::form_urlencoded::byte_serialize(a.public_id.as_bytes()).collect();
+            let path = format!("accounts/containers:lookup?destinationId={encoded}");
             let result = client.get(&path).await?;
             print_resource(&result, format, "container");
         }
         ContainersAction::Combine(a) => {
-            let mut path = format!(
+            let path = format!(
                 "accounts/{}/containers/{}:combine",
                 a.account_id, a.container_id
             );
+            let mut query: Vec<(&str, &str)> = vec![];
             if a.allow_user_permission_feature_update {
-                path.push_str("?allowUserPermissionFeatureUpdate=true");
+                query.push(("allowUserPermissionFeatureUpdate", "true"));
             }
-            let result = client.post(&path, &json!({})).await?;
+            let result = client.post_with_query(&path, &query, &json!({})).await?;
             print_resource(&result, format, "container");
         }
         ContainersAction::MoveTagId(a) => {
-            let mut params = vec![];
-            if let Some(name) = &a.tag_name {
-                params.push(format!("tagName={name}"));
+            let path = format!(
+                "accounts/{}/containers/{}:move_tag_id",
+                a.account_id, a.container_id
+            );
+            let mut query: Vec<(&str, String)> = vec![];
+            query.push(("tagId", a.tag_id.clone()));
+            if let Some(ref name) = a.tag_name {
+                query.push(("tagName", name.clone()));
             }
-            params.push(format!("tagId={}", a.tag_id));
             if a.allow_user_permission_feature_update {
-                params.push("allowUserPermissionFeatureUpdate=true".to_string());
+                query.push(("allowUserPermissionFeatureUpdate", "true".into()));
             }
             if a.copy_tag {
-                params.push("copyTag=true".to_string());
+                query.push(("copyTag", "true".into()));
             }
             if a.copy_users {
-                params.push("copyUsers=true".to_string());
+                query.push(("copyUsers", "true".into()));
             }
             if a.copy_settings {
-                params.push("copySettings=true".to_string());
+                query.push(("copySettings", "true".into()));
             }
-            let path = format!(
-                "accounts/{}/containers/{}:move_tag_id?{}",
-                a.account_id,
-                a.container_id,
-                params.join("&")
-            );
-            let result = client.post(&path, &json!({})).await?;
+            let query_refs: Vec<(&str, &str)> =
+                query.iter().map(|(k, v)| (*k, v.as_str())).collect();
+            let result = client
+                .post_with_query(&path, &query_refs, &json!({}))
+                .await?;
             print_resource(&result, format, "container");
         }
     }
