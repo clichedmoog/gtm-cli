@@ -1,4 +1,5 @@
 pub mod accounts;
+pub mod agent;
 pub mod auth;
 pub mod builtin_variables;
 pub mod clients;

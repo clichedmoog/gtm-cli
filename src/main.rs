@@ -30,6 +30,8 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// AI agent guide and documentation
+    Agent(commands::agent::AgentArgs),
     /// Authenticate with Google
     Auth(commands::auth::AuthArgs),
     /// Manage configuration defaults
@@ -98,6 +100,7 @@ async fn main() {
     });
 
     let result = match cli.command {
+        Commands::Agent(args) => commands::agent::handle(args),
         Commands::Auth(args) => commands::auth::handle(args, &config).await,
         Commands::Upgrade(args) => commands::upgrade::handle(args).await,
         Commands::Completions(args) => commands::completions::handle(args),
@@ -114,7 +117,8 @@ async fn main() {
         _ => {
             let client = GtmApiClient::new(config, cli.dry_run);
             match cli.command {
-                Commands::Auth(_)
+                Commands::Agent(_)
+                | Commands::Auth(_)
                 | Commands::Upgrade(_)
                 | Commands::Completions(_)
                 | Commands::Config(_) => {
