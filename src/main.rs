@@ -72,6 +72,8 @@ enum Commands {
     Destinations(commands::destinations::DestinationsArgs),
     /// Quick setup workflows (GA4, Facebook Pixel, etc.)
     Setup(commands::setup::SetupArgs),
+    /// Upgrade to the latest version
+    Upgrade(commands::upgrade::UpgradeArgs),
     /// Generate shell completions
     Completions(commands::completions::CompletionsArgs),
 }
@@ -97,6 +99,7 @@ async fn main() {
 
     let result = match cli.command {
         Commands::Auth(args) => commands::auth::handle(args, &config).await,
+        Commands::Upgrade(args) => commands::upgrade::handle(args).await,
         Commands::Completions(args) => commands::completions::handle(args),
         Commands::Config(args) => {
             // Setup needs a client; get/set/unset don't
@@ -111,7 +114,10 @@ async fn main() {
         _ => {
             let client = GtmApiClient::new(config, cli.dry_run);
             match cli.command {
-                Commands::Auth(_) | Commands::Completions(_) | Commands::Config(_) => {
+                Commands::Auth(_)
+                | Commands::Upgrade(_)
+                | Commands::Completions(_)
+                | Commands::Config(_) => {
                     unreachable!()
                 }
                 Commands::Accounts(args) => {

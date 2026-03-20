@@ -15,6 +15,7 @@ pub mod tags;
 pub mod templates;
 pub mod transformations;
 pub mod triggers;
+pub mod upgrade;
 pub mod variables;
 pub mod version_headers;
 pub mod versions;
