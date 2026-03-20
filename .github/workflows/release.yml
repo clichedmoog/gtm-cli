@@ -118,4 +118,10 @@ jobs:
         run: mkdir -p npm/bin
 
       - name: Publish to npm
-        run: cd npm && npm publish --access public --provenance
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          TAG_FLAG=""
+          if echo "$VERSION" | grep -qE '(alpha|beta|rc)'; then
+            TAG_FLAG="--tag prerelease"
+          fi
+          cd npm && npm publish --access public --provenance $TAG_FLAG
