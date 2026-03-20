@@ -123,7 +123,7 @@ pub async fn handle(
     match args.action {
         VersionsAction::List(a) => {
             let path = format!("{}/versions", container_path(&a.c));
-            let result = client.get(&path).await?;
+            let result = client.get_all(&path).await?;
             print_resource(&result, format, "versions");
         }
         VersionsAction::Get(a) => {

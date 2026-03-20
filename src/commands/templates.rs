@@ -136,7 +136,7 @@ pub async fn handle(
     match args.action {
         TemplatesAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
-            let result = client.get(&format!("{base}/templates")).await?;
+            let result = client.get_all(&format!("{base}/templates")).await?;
             print_resource(&result, format, "templates");
         }
         TemplatesAction::Get(a) => {

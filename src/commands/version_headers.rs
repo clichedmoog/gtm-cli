@@ -49,7 +49,7 @@ pub async fn handle(
                 "accounts/{}/containers/{}/version_headers",
                 a.c.account_id, a.c.container_id
             );
-            let result = client.get(&path).await?;
+            let result = client.get_all(&path).await?;
             print_resource(&result, format, "version_headers");
         }
         VersionHeadersAction::Latest(a) => {

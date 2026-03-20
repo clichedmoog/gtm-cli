@@ -48,7 +48,7 @@ pub async fn handle(
 ) -> Result<()> {
     match args.action {
         AccountsAction::List => {
-            let result = client.get("accounts").await?;
+            let result = client.get_all("accounts").await?;
             print_resource(&result, format, "accounts");
         }
         AccountsAction::Get(a) => {

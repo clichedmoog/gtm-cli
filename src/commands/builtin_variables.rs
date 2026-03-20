@@ -87,7 +87,7 @@ pub async fn handle(
     match args.action {
         BuiltinVariablesAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
-            let result = client.get(&format!("{base}/built_in_variables")).await?;
+            let result = client.get_all(&format!("{base}/built_in_variables")).await?;
             print_resource(&result, format, "built_in_variables");
         }
         BuiltinVariablesAction::Create(a) => {

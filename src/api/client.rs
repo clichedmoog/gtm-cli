@@ -35,6 +35,72 @@ impl GtmApiClient {
             .await
     }
 
+    /// GET with automatic pagination. Collects all pages into a single response.
+    /// The GTM API uses `nextPageToken` / `pageToken` for pagination.
+    pub async fn get_all(&self, path: &str) -> Result<Value> {
+        let auth = self.auth_header().await?;
+        let mut all_results: Option<Value> = None;
+        let mut page_token: Option<String> = None;
+
+        loop {
+            let mut url = format!("{API_BASE}/{path}");
+            if let Some(ref token) = page_token {
+                let sep = if url.contains('?') { '&' } else { '?' };
+                url = format!("{url}{sep}pageToken={token}");
+            }
+
+            let result = self
+                .send_with_retry(|| self.http.get(&url).header("Authorization", &auth))
+                .await?;
+
+            // Extract next page token
+            page_token = result
+                .get("nextPageToken")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+
+            match &mut all_results {
+                None => {
+                    all_results = Some(result);
+                }
+                Some(existing) => {
+                    // Merge arrays from the response into the accumulated result
+                    if let (Some(existing_obj), Some(new_obj)) =
+                        (existing.as_object_mut(), result.as_object())
+                    {
+                        for (key, new_val) in new_obj {
+                            if key == "nextPageToken" {
+                                continue;
+                            }
+                            if let Some(new_arr) = new_val.as_array() {
+                                if let Some(existing_arr) =
+                                    existing_obj.get_mut(key).and_then(|v| v.as_array_mut())
+                                {
+                                    existing_arr.extend(new_arr.clone());
+                                } else {
+                                    existing_obj.insert(key.clone(), new_val.clone());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if page_token.is_none() {
+                break;
+            }
+        }
+
+        // Remove nextPageToken from final result
+        if let Some(ref mut result) = all_results {
+            if let Some(obj) = result.as_object_mut() {
+                obj.remove("nextPageToken");
+            }
+        }
+
+        Ok(all_results.unwrap_or(Value::Object(serde_json::Map::new())))
+    }
+
     pub async fn post(&self, path: &str, body: &Value) -> Result<Value> {
         if self.dry_run {
             self.print_dry_run("POST", path, Some(body));

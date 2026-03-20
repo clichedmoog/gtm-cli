@@ -86,7 +86,7 @@ pub async fn handle(
     match args.action {
         PermissionsAction::List(a) => {
             let path = format!("accounts/{}/user_permissions", a.account_id);
-            let result = client.get(&path).await?;
+            let result = client.get_all(&path).await?;
             print_resource(&result, format, "permissions");
         }
         PermissionsAction::Get(a) => {

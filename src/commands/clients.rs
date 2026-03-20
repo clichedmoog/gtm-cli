@@ -114,7 +114,7 @@ pub async fn handle(args: ClientsArgs, client: &GtmApiClient, format: &OutputFor
     match args.action {
         ClientsAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
-            let result = client.get(&format!("{base}/clients")).await?;
+            let result = client.get_all(&format!("{base}/clients")).await?;
             print_resource(&result, format, "clients");
         }
         ClientsAction::Get(a) => {

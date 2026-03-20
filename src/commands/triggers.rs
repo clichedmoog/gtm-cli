@@ -123,7 +123,7 @@ pub async fn handle(
     match args.action {
         TriggersAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
-            let result = client.get(&format!("{base}/triggers")).await?;
+            let result = client.get_all(&format!("{base}/triggers")).await?;
             print_resource(&result, format, "triggers");
         }
         TriggersAction::Get(a) => {

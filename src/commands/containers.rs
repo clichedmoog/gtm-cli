@@ -91,7 +91,7 @@ pub async fn handle(
     match args.action {
         ContainersAction::List(a) => {
             let path = format!("accounts/{}/containers", a.account_id);
-            let result = client.get(&path).await?;
+            let result = client.get_all(&path).await?;
             print_resource(&result, format, "containers");
         }
         ContainersAction::Get(a) => {

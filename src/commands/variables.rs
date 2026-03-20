@@ -126,7 +126,7 @@ pub async fn handle(
     match args.action {
         VariablesAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
-            let result = client.get(&format!("{base}/variables")).await?;
+            let result = client.get_all(&format!("{base}/variables")).await?;
             print_resource(&result, format, "variables");
         }
         VariablesAction::Get(a) => {

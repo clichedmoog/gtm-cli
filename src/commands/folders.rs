@@ -141,7 +141,7 @@ pub async fn handle(args: FoldersArgs, client: &GtmApiClient, format: &OutputFor
     match args.action {
         FoldersAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
-            let result = client.get(&format!("{base}/folders")).await?;
+            let result = client.get_all(&format!("{base}/folders")).await?;
             print_resource(&result, format, "folders");
         }
         FoldersAction::Get(a) => {

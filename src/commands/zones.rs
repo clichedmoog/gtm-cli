@@ -61,7 +61,7 @@ pub async fn handle(args: ZonesArgs, client: &GtmApiClient, format: &OutputForma
     match args.action {
         ZonesAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
-            let result = client.get(&format!("{base}/zones")).await?;
+            let result = client.get_all(&format!("{base}/zones")).await?;
             print_resource(&result, format, "zones");
         }
         ZonesAction::Get(a) => {

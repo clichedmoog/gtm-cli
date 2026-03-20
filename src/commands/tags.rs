@@ -136,7 +136,7 @@ pub async fn handle(args: TagsArgs, client: &GtmApiClient, format: &OutputFormat
     match args.action {
         TagsAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
-            let result = client.get(&format!("{base}/tags")).await?;
+            let result = client.get_all(&format!("{base}/tags")).await?;
             print_resource(&result, format, "tags");
         }
         TagsAction::Get(a) => {
