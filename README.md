@@ -1,4 +1,4 @@
-# gtm-cli
+# GTM CLI
 
 A command-line interface for the Google Tag Manager API v2 — built for humans and AI agents.
 
@@ -113,7 +113,7 @@ Environment variables take precedence:
 | `variables` | list, get, create, update, delete, revert | Workspace |
 | `builtin-variables` | list, create, delete, revert | Workspace |
 | `folders` | list, get, create, update, delete, revert, move-entities, entities | Workspace |
-| `versions` | list, get, update, delete, undelete, publish, set-latest, live | Container |
+| `versions` | list, get, create, update, delete, undelete, publish, set-latest, live | Container |
 | `version-headers` | list, latest | Container |
 | `environments` | list, get, create, update, delete, reauthorize | Container |
 | `destinations` | list, get, link | Container |
@@ -122,7 +122,7 @@ Environment variables take precedence:
 | `gtag-configs` | list, get, create, update, delete, revert | Workspace |
 | `templates` | list, get, create, update, delete, revert, import | Workspace |
 | `transformations` | list, get, create, update, delete, revert | Workspace |
-| `zones` | list, get | Workspace |
+| `zones` | list, get, create, update, delete, revert | Workspace |
 
 ### Utility Commands
 
@@ -183,7 +183,7 @@ gtm workspaces import -i backup.json
 ### Version management
 
 ```bash
-gtm workspaces create-version --name "v1.0" --notes "Initial release"
+gtm versions create --name "v1.0" --notes "Initial release"
 gtm versions publish --version-id 1
 gtm versions live
 ```

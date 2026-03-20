@@ -1,4 +1,5 @@
 use clap::{Args, Subcommand};
+use serde_json::json;
 
 use crate::api::client::GtmApiClient;
 use crate::api::workspace::resolve_workspace;
@@ -27,6 +28,14 @@ pub enum ZonesAction {
     List(ZonesListArgs),
     /// Get zone details
     Get(ZonesGetArgs),
+    /// Create a new zone
+    Create(ZonesCreateArgs),
+    /// Update a zone
+    Update(ZonesUpdateArgs),
+    /// Delete a zone
+    Delete(ZonesDeleteArgs),
+    /// Revert zone changes
+    Revert(ZonesRevertArgs),
 }
 
 #[derive(Args)]
@@ -37,6 +46,57 @@ pub struct ZonesListArgs {
 
 #[derive(Args)]
 pub struct ZonesGetArgs {
+    #[command(flatten)]
+    ws: WorkspaceFlags,
+    #[arg(long)]
+    zone_id: String,
+}
+
+#[derive(Args)]
+pub struct ZonesCreateArgs {
+    #[command(flatten)]
+    ws: WorkspaceFlags,
+    /// Zone name
+    #[arg(long)]
+    name: String,
+    /// Child containers as JSON array (e.g. '[{"publicId":"GTM-XXXX","nickname":"Child"}]')
+    #[arg(long)]
+    child_container: Option<String>,
+    /// Zone boundary type and conditions as JSON
+    #[arg(long)]
+    boundary: Option<String>,
+}
+
+#[derive(Args)]
+pub struct ZonesUpdateArgs {
+    #[command(flatten)]
+    ws: WorkspaceFlags,
+    #[arg(long)]
+    zone_id: String,
+    /// Zone name
+    #[arg(long)]
+    name: Option<String>,
+    /// Child containers as JSON array
+    #[arg(long)]
+    child_container: Option<String>,
+    /// Zone boundary type and conditions as JSON
+    #[arg(long)]
+    boundary: Option<String>,
+}
+
+#[derive(Args)]
+pub struct ZonesDeleteArgs {
+    #[command(flatten)]
+    ws: WorkspaceFlags,
+    #[arg(long)]
+    zone_id: String,
+    /// Required to confirm deletion
+    #[arg(long)]
+    force: bool,
+}
+
+#[derive(Args)]
+pub struct ZonesRevertArgs {
     #[command(flatten)]
     ws: WorkspaceFlags,
     #[arg(long)]
@@ -67,6 +127,64 @@ pub async fn handle(args: ZonesArgs, client: &GtmApiClient, format: &OutputForma
         ZonesAction::Get(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client.get(&format!("{base}/zones/{}", a.zone_id)).await?;
+            print_resource(&result, format, "zone");
+        }
+        ZonesAction::Create(a) => {
+            let base = workspace_path(&a.ws, client).await?;
+            let mut body = json!({ "name": a.name });
+            if let Some(child) = a.child_container {
+                let parsed: serde_json::Value = serde_json::from_str(&child)
+                    .map_err(|_| crate::error::GtmError::InvalidParams(child))?;
+                body["childContainer"] = parsed;
+            }
+            if let Some(boundary) = a.boundary {
+                let parsed: serde_json::Value = serde_json::from_str(&boundary)
+                    .map_err(|_| crate::error::GtmError::InvalidParams(boundary))?;
+                body["boundary"] = parsed;
+            }
+            let result = client.post(&format!("{base}/zones"), &body).await?;
+            print_resource(&result, format, "zone");
+        }
+        ZonesAction::Update(a) => {
+            let base = workspace_path(&a.ws, client).await?;
+            let path = format!("{base}/zones/{}", a.zone_id);
+            let mut body = client.get(&path).await?;
+            if let Some(name) = a.name {
+                body["name"] = json!(name);
+            }
+            if let Some(child) = a.child_container {
+                let parsed: serde_json::Value = serde_json::from_str(&child)
+                    .map_err(|_| crate::error::GtmError::InvalidParams(child))?;
+                body["childContainer"] = parsed;
+            }
+            if let Some(boundary) = a.boundary {
+                let parsed: serde_json::Value = serde_json::from_str(&boundary)
+                    .map_err(|_| crate::error::GtmError::InvalidParams(boundary))?;
+                body["boundary"] = parsed;
+            }
+            let result = client.put(&path, &body).await?;
+            print_resource(&result, format, "zone");
+        }
+        ZonesAction::Delete(a) => {
+            if !a.force {
+                eprintln!(
+                    "WARNING: This will permanently delete zone '{}'.",
+                    a.zone_id
+                );
+                eprintln!("Run the same command with --force to confirm.");
+                return Ok(());
+            }
+            let base = workspace_path(&a.ws, client).await?;
+            client
+                .delete(&format!("{base}/zones/{}", a.zone_id))
+                .await?;
+            crate::output::formatter::print_deleted("zone", &a.zone_id);
+        }
+        ZonesAction::Revert(a) => {
+            let base = workspace_path(&a.ws, client).await?;
+            let result = client
+                .post(&format!("{base}/zones/{}:revert", a.zone_id), &json!({}))
+                .await?;
             print_resource(&result, format, "zone");
         }
     }
