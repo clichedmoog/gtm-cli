@@ -63,8 +63,15 @@ async fn check_and_notify() -> Result<(), Box<dyn std::error::Error + Send + Syn
     };
 
     let current = current_version();
-    if latest != current && !current.contains("alpha") && !current.contains("beta") {
-        eprintln!("\n  Update available: v{current} → v{latest}\n  Run `gtm upgrade` to update.\n");
+    if let (Ok(latest_ver), Ok(current_ver)) = (
+        semver::Version::parse(&latest),
+        semver::Version::parse(current),
+    ) {
+        if latest_ver > current_ver {
+            eprintln!(
+                "\n  Update available: v{current} → v{latest}\n  Run `gtm upgrade` to update.\n"
+            );
+        }
     }
 
     Ok(())

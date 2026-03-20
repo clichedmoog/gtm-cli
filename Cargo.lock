@@ -625,6 +625,7 @@ dependencies = [
  "predicates",
  "reqwest",
  "rsa",
+ "semver",
  "serde",
  "serde_json",
  "sha2",

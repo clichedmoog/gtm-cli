@@ -27,6 +27,7 @@ comfy-table = "7"
 base64 = "0.22"
 rsa = { version = "0.9", features = ["sha2"] }
 sha2 = "0.10"
+semver = "1"
 
 [dev-dependencies]
 tempfile = "3"
