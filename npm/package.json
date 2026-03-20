@@ -1,6 +1,6 @@
 {
   "name": "gtmcli",
-  "version": "0.1.0-alpha.5",
+  "version": "0.1.0",
   "description": "Google Tag Manager CLI — built for humans and AI agents",
   "bin": {
     "gtm": "bin/gtm"
