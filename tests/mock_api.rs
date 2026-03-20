@@ -71,9 +71,9 @@ async fn test_mock_accounts_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert!(json["account"].is_array());
-    assert_eq!(json["account"][0]["accountId"], "123456");
-    assert_eq!(json["account"][0]["name"], "Test Account");
+    assert!(json.is_array());
+    assert_eq!(json[0]["accountId"], "123456");
+    assert_eq!(json[0]["name"], "Test Account");
 }
 
 #[tokio::test]
@@ -150,8 +150,8 @@ async fn test_mock_containers_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert!(json["container"].is_array());
-    assert_eq!(json["container"][0]["publicId"], "GTM-XXXX");
+    assert!(json.is_array());
+    assert_eq!(json[0]["publicId"], "GTM-XXXX");
 }
 
 #[tokio::test]
@@ -220,8 +220,8 @@ async fn test_mock_workspaces_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert!(json["workspace"].is_array());
-    assert_eq!(json["workspace"][0]["name"], "Default Workspace");
+    assert!(json.is_array());
+    assert_eq!(json[0]["name"], "Default Workspace");
 }
 
 // ─── Tags ───
@@ -264,8 +264,8 @@ async fn test_mock_tags_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert!(json["tag"].is_array());
-    assert_eq!(json["tag"][0]["name"], "GA4 Config");
+    assert!(json.is_array());
+    assert_eq!(json[0]["name"], "GA4 Config");
 }
 
 #[tokio::test]
@@ -405,7 +405,7 @@ async fn test_mock_triggers_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert_eq!(json["trigger"][0]["name"], "All Pages");
+    assert_eq!(json[0]["name"], "All Pages");
 }
 
 // ─── Variables ───
@@ -448,7 +448,7 @@ async fn test_mock_variables_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert_eq!(json["variable"][0]["name"], "Page URL");
+    assert_eq!(json[0]["name"], "Page URL");
 }
 
 // ─── Versions ───
@@ -482,7 +482,7 @@ async fn test_mock_versions_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert!(json["containerVersion"].is_array());
+    assert!(json.is_array());
 }
 
 #[tokio::test]
@@ -545,7 +545,7 @@ async fn test_mock_environments_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert!(json["environment"].is_array());
+    assert!(json.is_array(), "environments should be unwrapped array");
 }
 
 // ─── Permissions ───
@@ -572,7 +572,7 @@ async fn test_mock_permissions_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert!(json["userPermission"].is_array());
+    assert!(json.is_array(), "permissions should be unwrapped array");
 }
 
 // ─── Pagination ───
@@ -611,12 +611,10 @@ async fn test_mock_pagination() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    let accounts = json["account"].as_array().unwrap();
+    let accounts = json.as_array().unwrap();
     assert_eq!(accounts.len(), 2);
     assert_eq!(accounts[0]["accountId"], "1");
     assert_eq!(accounts[1]["accountId"], "2");
-    // nextPageToken should be removed from final result
-    assert!(json.get("nextPageToken").is_none());
 }
 
 // ─── Dry Run ───
@@ -1347,7 +1345,7 @@ async fn test_mock_version_headers_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert!(json["containerVersionHeader"].is_array());
+    assert!(json.is_array(), "versionHeaders should be unwrapped array");
 }
 
 #[tokio::test]
@@ -1496,7 +1494,7 @@ async fn test_mock_folders_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert_eq!(json["folder"][0]["name"], "GA4 Tags");
+    assert_eq!(json[0]["name"], "GA4 Tags");
 }
 
 #[tokio::test]
@@ -1533,7 +1531,7 @@ async fn test_mock_folders_create() {
 async fn test_mock_folders_entities() {
     let server = setup_server().await;
     mount_workspace_mock(&server).await;
-    Mock::given(method("POST"))
+    Mock::given(method("GET"))
         .and(path(
             "/accounts/123456/containers/789/workspaces/1/folders/3:entities",
         ))
@@ -1593,8 +1591,8 @@ async fn test_mock_builtin_variables_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert!(json["builtInVariable"].is_array());
-    assert_eq!(json["builtInVariable"][0]["type"], "pageUrl");
+    assert!(json.is_array());
+    assert_eq!(json[0]["type"], "pageUrl");
 }
 
 // ─── Destinations ───
@@ -1628,7 +1626,7 @@ async fn test_mock_destinations_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert!(json["destination"].is_array());
+    assert!(json.is_array(), "destinations should be unwrapped array");
 }
 
 #[tokio::test]
@@ -1688,8 +1686,8 @@ async fn test_mock_clients_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert!(json["client"].is_array());
-    assert_eq!(json["client"][0]["name"], "GA4 Client");
+    assert!(json.is_array());
+    assert_eq!(json[0]["name"], "GA4 Client");
 }
 
 #[tokio::test]
@@ -1755,7 +1753,7 @@ async fn test_mock_gtag_configs_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert!(json["gtagConfig"].is_array());
+    assert!(json.is_array(), "gtagConfigs should be unwrapped array");
 }
 
 // ─── Templates ───
@@ -1788,7 +1786,7 @@ async fn test_mock_templates_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert!(json["template"].is_array());
+    assert!(json.is_array(), "templates should be unwrapped array");
 }
 
 // ─── Transformations (server-side) ───
@@ -1821,7 +1819,7 @@ async fn test_mock_transformations_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert!(json["transformation"].is_array());
+    assert!(json.is_array(), "transformations should be unwrapped array");
 }
 
 // ─── Zones (server-side) ───
@@ -1852,7 +1850,7 @@ async fn test_mock_zones_list() {
         .assert()
         .success();
     let json = parse_json(&assert);
-    assert!(json["zone"].is_array());
+    assert!(json.is_array(), "zones should be unwrapped array");
 }
 
 #[tokio::test]

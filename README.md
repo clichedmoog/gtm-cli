@@ -42,16 +42,16 @@ gtm versions publish --version-id 1
 npm install -g gtmcli
 ```
 
-### Quick Install (macOS / Linux)
+### Quick Install (macOS)
 
 ```bash
 curl -fsSL https://github.com/clichedmoog/gtmcli/releases/latest/download/gtm-$(uname -m | sed 's/arm64/aarch64/')-apple-darwin.tar.gz | tar xz -C /usr/local/bin
 ```
 
-### Homebrew (coming soon)
+### Quick Install (Linux)
 
 ```bash
-brew install clichedmoog/tap/gtm
+curl -fsSL https://github.com/clichedmoog/gtmcli/releases/latest/download/gtm-$(uname -m)-unknown-linux-gnu.tar.gz | tar xz -C /usr/local/bin
 ```
 
 ### From source
@@ -135,25 +135,10 @@ gtm tags create --name "Test" --type html --dry-run
 
 ## Authentication
 
-### OAuth (default)
-
 ```bash
 gtm auth login          # Opens browser for Google sign-in
 gtm auth status         # Check authentication status
 gtm auth logout         # Clear stored credentials
-```
-
-Built-in OAuth credentials are included — no setup required.
-
-### Service Account
-
-```bash
-# Login with service account key
-gtm auth login --service-account /path/to/key.json
-
-# Or via environment variable
-export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json
-gtm accounts list
 ```
 
 ## Configuration

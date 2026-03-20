@@ -155,13 +155,14 @@ impl GtmApiClient {
     }
 
     pub async fn put(&self, path: &str, body: &Value) -> Result<Value> {
+        let mut body = body.clone();
+        strip_readonly_fields(&mut body);
         if self.dry_run {
-            self.print_dry_run("PUT", path, Some(body));
-            return Ok(body.clone());
+            self.print_dry_run("PUT", path, Some(&body));
+            return Ok(body);
         }
         let url = format!("{}/{path}", self.api_base);
         let auth = self.auth_header().await?;
-        let body = body.clone();
         self.send_with_retry(|| {
             self.http
                 .put(&url)
@@ -274,5 +275,25 @@ impl GtmApiClient {
                     .map(String::from)
             })
             .unwrap_or_else(|| "Unknown error".into())
+    }
+}
+
+/// Remove read-only fields from a GTM API resource before PUT.
+/// The GTM API rejects updates that include these server-managed fields.
+fn strip_readonly_fields(body: &mut serde_json::Value) {
+    const READONLY_FIELDS: &[&str] = &[
+        "fingerprint",
+        "tagManagerUrl",
+        "path",
+        "parentFolderId",
+        "workspaceId",
+        "accountId",
+        "containerId",
+        "vendorTemplate",
+    ];
+    if let Some(obj) = body.as_object_mut() {
+        for field in READONLY_FIELDS {
+            obj.remove(*field);
+        }
     }
 }

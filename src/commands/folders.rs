@@ -222,10 +222,7 @@ pub async fn handle(args: FoldersArgs, client: &GtmApiClient, format: &OutputFor
         FoldersAction::Entities(a) => {
             let base = workspace_path(&a.ws, client).await?;
             let result = client
-                .post(
-                    &format!("{base}/folders/{}:entities", a.folder_id),
-                    &json!({}),
-                )
+                .get(&format!("{base}/folders/{}:entities", a.folder_id))
                 .await?;
             print_resource(&result, format, "folder_entities");
         }

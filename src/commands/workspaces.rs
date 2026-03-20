@@ -281,32 +281,20 @@ pub async fn handle(
                 a.account_id, a.container_id, ws_id
             );
 
+            let tags_path = format!("{base}/tags");
+            let triggers_path = format!("{base}/triggers");
+            let variables_path = format!("{base}/variables");
+            let folders_path = format!("{base}/folders");
             let (tags, triggers, variables, folders) = tokio::join!(
-                async {
-                    client
-                        .get(&format!("{base}/tags"))
-                        .await
-                        .unwrap_or(json!({}))
-                },
-                async {
-                    client
-                        .get(&format!("{base}/triggers"))
-                        .await
-                        .unwrap_or(json!({}))
-                },
-                async {
-                    client
-                        .get(&format!("{base}/variables"))
-                        .await
-                        .unwrap_or(json!({}))
-                },
-                async {
-                    client
-                        .get(&format!("{base}/folders"))
-                        .await
-                        .unwrap_or(json!({}))
-                },
+                client.get_all(&tags_path),
+                client.get_all(&triggers_path),
+                client.get_all(&variables_path),
+                client.get_all(&folders_path),
             );
+            let tags = tags?;
+            let triggers = triggers?;
+            let variables = variables?;
+            let folders = folders?;
 
             let export = json!({
                 "exportVersion": "1",

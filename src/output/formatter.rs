@@ -17,9 +17,11 @@ pub fn print_output(value: &Value, format: &OutputFormat) {
 pub fn print_resource(value: &Value, format: &OutputFormat, resource: &str) {
     match format {
         OutputFormat::Json => {
+            // For JSON output, unwrap the API wrapper (e.g., {"tag": [...]} → [...])
+            let output = unwrap_json(value);
             println!(
                 "{}",
-                serde_json::to_string_pretty(value).unwrap_or_else(|_| value.to_string())
+                serde_json::to_string_pretty(&output).unwrap_or_else(|_| output.to_string())
             );
         }
         OutputFormat::Table => {
@@ -29,6 +31,28 @@ pub fn print_resource(value: &Value, format: &OutputFormat, resource: &str) {
             print_compact(value);
         }
     }
+}
+
+/// Unwrap GTM API list wrapper. If the value is an object whose only fields are
+/// a single array and optionally "nextPageToken", return just the array.
+/// Single resource objects and other shapes are returned as-is.
+fn unwrap_json(value: &Value) -> Value {
+    let Some(obj) = value.as_object() else {
+        return value.clone();
+    };
+    let mut array_value = None;
+    for (key, val) in obj {
+        if key == "nextPageToken" {
+            continue;
+        }
+        if val.is_array() && array_value.is_none() {
+            array_value = Some(val);
+        } else {
+            // Multiple non-token fields or a non-array field -- don't unwrap
+            return value.clone();
+        }
+    }
+    array_value.cloned().unwrap_or_else(|| value.clone())
 }
 
 fn print_compact(value: &Value) {
@@ -42,6 +66,7 @@ fn print_compact(value: &Value) {
         "variableId",
         "folderId",
         "templateId",
+        "containerVersionId",
         "versionId",
         "environmentId",
         "clientId",

@@ -48,8 +48,10 @@ gtm auth status
 
 ## Global Flags
 
-- `--format json|table` — Output format (default: json). Use `json` for programmatic access.
+- `--format json|table|compact` — Output format (auto-detects: json when piped, table for TTY). Use `json` for programmatic access.
 - `--dry-run` — Preview mutating operations without executing them.
+- `--quiet` — Suppress non-essential output (update checks, warnings).
+- `--no-color` — Disable colored output.
 
 ## Configuration Defaults
 
@@ -149,11 +151,12 @@ The JSON is automatically converted to GTM's nested parameter format.
 
 ## Output
 
-Default output is JSON. Parse with `jq` for scripting:
+Default output is JSON when piped (table in terminal). List responses are unwrapped arrays:
 
 ```bash
 gtm tags list | jq '.[].name'
 gtm containers list | jq '.[] | select(.publicId == "GTM-XXXXX")'
+gtm tags list --format compact   # ID + name only
 ```
 
 ## Error Handling

@@ -17,7 +17,7 @@ pub async fn resolve_workspace(
     }
 
     let path = format!("accounts/{account_id}/containers/{container_id}/workspaces");
-    let result = client.get(&path).await?;
+    let result = client.get_all(&path).await?;
 
     if let Some(workspaces) = result.get("workspace").and_then(|w| w.as_array()) {
         if let Some(first) = workspaces.first() {

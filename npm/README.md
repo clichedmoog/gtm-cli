@@ -73,7 +73,7 @@ gtm versions publish --version-id 1
 This npm package downloads the platform-specific binary from [GitHub Releases](https://github.com/clichedmoog/gtmcli/releases) during `postinstall`. Supported platforms:
 
 - macOS (Apple Silicon, Intel)
-- Linux (x86_64, ARM64, musl)
+- Linux (x86_64, ARM64)
 - Windows (x86_64)
 
 ## Documentation
