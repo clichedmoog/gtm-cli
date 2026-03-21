@@ -197,6 +197,8 @@ Environment variables take precedence:
 | Command | Description |
 |---------|-------------|
 | `setup` | Quick setup workflows (GA4, Facebook Pixel, form tracking) |
+| `validate` | Validate workspace resources for common issues (unused triggers, orphan tags, etc.) |
+| `changelog` | Compare two container versions and show changes (added/removed/modified) |
 | `config` | Manage default settings |
 | `upgrade` | Self-update to latest version |
 | `agent guide` | Documentation for AI agents |

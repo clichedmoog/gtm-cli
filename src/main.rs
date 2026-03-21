@@ -83,6 +83,10 @@ enum Commands {
     Destinations(commands::destinations::DestinationsArgs),
     /// Quick setup workflows (GA4, Facebook Pixel, etc.)
     Setup(commands::setup::SetupArgs),
+    /// Validate workspace resources for common issues
+    Validate(commands::validate::ValidateArgs),
+    /// Compare two container versions and show changes
+    Changelog(commands::changelog::ChangelogArgs),
     /// Upgrade to the latest version
     Upgrade(commands::upgrade::UpgradeArgs),
     /// Generate shell completions
@@ -204,6 +208,12 @@ async fn main() {
                     commands::destinations::handle(args, &client, &format).await
                 }
                 Commands::Setup(args) => commands::setup::handle(args, &client, &format).await,
+                Commands::Validate(args) => {
+                    commands::validate::handle(args, &client, &format).await
+                }
+                Commands::Changelog(args) => {
+                    commands::changelog::handle(args, &client, &format).await
+                }
             }
         }
     };

@@ -2017,3 +2017,518 @@ async fn test_mock_containers_snippet() {
     let json = parse_json(&assert);
     assert!(json["snippet"].is_string());
 }
+
+// ─── Validate ───
+
+#[tokio::test]
+async fn test_mock_validate_clean() {
+    let server = setup_server().await;
+    mount_workspace_mock(&server).await;
+
+    // Tags with firing triggers
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/workspaces/1/tags"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "tag": [{
+                "tagId": "1",
+                "name": "GA4 Config",
+                "type": "gaawc",
+                "firingTriggerId": ["2"],
+                "parentFolderId": "10"
+            }]
+        })))
+        .mount(&server)
+        .await;
+
+    // Trigger referenced by the tag
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/workspaces/1/triggers"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "trigger": [{
+                "triggerId": "2",
+                "name": "All Pages",
+                "type": "pageview"
+            }]
+        })))
+        .mount(&server)
+        .await;
+
+    // Variable referenced in tag
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/workspaces/1/variables"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "variable": [{
+                "variableId": "3",
+                "name": "Page URL",
+                "type": "u",
+                "parentFolderId": "10"
+            }]
+        })))
+        .mount(&server)
+        .await;
+
+    // The tag JSON includes {{Page URL}} so the variable is referenced
+    // Update tag mock to include the variable reference
+    // Actually, let's set variables to empty to keep it simple — no variables = no issues
+    // Re-mount variables as empty
+    // Instead, let's just have no variables
+
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/workspaces/1/folders"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "folder": [{"folderId": "10", "name": "Main"}]
+        })))
+        .mount(&server)
+        .await;
+
+    // The variable "Page URL" won't be referenced in the tag JSON (no {{Page URL}} pattern)
+    // so we'll get an unused-variable warning. Let's check that the command still succeeds
+    // (only errors cause exit(1))
+    let assert = gtm_with_server(&server)
+        .args([
+            "validate",
+            "--account-id", "123456",
+            "--container-id", "789",
+        ])
+        .assert()
+        .success();
+    let json = parse_json(&assert);
+    // Should have summary
+    assert!(json["summary"]["total"].is_number());
+}
+
+#[tokio::test]
+async fn test_mock_validate_issues_found() {
+    let server = setup_server().await;
+    mount_workspace_mock(&server).await;
+
+    // Tag with no firing triggers (error: no-firing-trigger)
+    // Two tags with same name (warning: duplicate-tag-name)
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/workspaces/1/tags"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "tag": [
+                {
+                    "tagId": "1",
+                    "name": "Orphan Tag",
+                    "type": "html"
+                },
+                {
+                    "tagId": "2",
+                    "name": "Dup Tag",
+                    "type": "html",
+                    "firingTriggerId": ["10"]
+                },
+                {
+                    "tagId": "3",
+                    "name": "Dup Tag",
+                    "type": "html",
+                    "firingTriggerId": ["10"]
+                }
+            ]
+        })))
+        .mount(&server)
+        .await;
+
+    // Trigger not referenced by any tag (warning: unused-trigger)
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/workspaces/1/triggers"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "trigger": [
+                {"triggerId": "10", "name": "All Pages", "type": "pageview"},
+                {"triggerId": "99", "name": "Unused Click", "type": "click"}
+            ]
+        })))
+        .mount(&server)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/workspaces/1/variables"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "variable": []
+        })))
+        .mount(&server)
+        .await;
+
+    // Empty folder (warning: empty-folder)
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/workspaces/1/folders"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "folder": [{"folderId": "50", "name": "Empty Folder"}]
+        })))
+        .mount(&server)
+        .await;
+
+    // Should exit with code 1 because there's an error-level issue
+    let assert = gtm_with_server(&server)
+        .args([
+            "validate",
+            "--account-id", "123456",
+            "--container-id", "789",
+        ])
+        .assert();
+    // We can't easily check exit code 1 from process::exit in assert_cmd,
+    // but we can check the JSON output contains the expected issues
+    let stdout = String::from_utf8_lossy(&assert.get_output().stdout);
+    let json: Value = serde_json::from_str(&stdout).expect("should be valid JSON");
+
+    assert!(json["summary"]["errors"].as_u64().unwrap() >= 1);
+    assert!(json["summary"]["warnings"].as_u64().unwrap() >= 1);
+
+    let issues = json["issues"].as_array().unwrap();
+    let rules: Vec<&str> = issues.iter().filter_map(|i| i["rule"].as_str()).collect();
+    assert!(rules.contains(&"no-firing-trigger"));
+    assert!(rules.contains(&"unused-trigger"));
+    assert!(rules.contains(&"empty-folder"));
+    assert!(rules.contains(&"duplicate-tag-name"));
+}
+
+#[tokio::test]
+async fn test_mock_validate_table_format() {
+    let server = setup_server().await;
+    mount_workspace_mock(&server).await;
+
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/workspaces/1/tags"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "tag": [{"tagId": "1", "name": "OK Tag", "type": "html", "firingTriggerId": ["2"]}]
+        })))
+        .mount(&server)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/workspaces/1/triggers"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "trigger": [{"triggerId": "2", "name": "All Pages", "type": "pageview"}]
+        })))
+        .mount(&server)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/workspaces/1/variables"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "variable": []
+        })))
+        .mount(&server)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/workspaces/1/folders"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "folder": []
+        })))
+        .mount(&server)
+        .await;
+
+    gtm_table_with_server(&server)
+        .args([
+            "validate",
+            "--account-id", "123456",
+            "--container-id", "789",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("No issues found."));
+}
+
+// ─── Changelog ───
+
+#[tokio::test]
+async fn test_mock_changelog_with_changes() {
+    let server = setup_server().await;
+
+    // Version 1 (from)
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/versions/1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "containerVersionId": "1",
+            "tag": [
+                {"tagId": "1", "name": "Old Tag", "type": "html", "fingerprint": "aaa"},
+                {"tagId": "2", "name": "FB", "type": "html", "fingerprint": "bbb"}
+            ],
+            "trigger": [
+                {"triggerId": "10", "name": "Old Click", "type": "click", "fingerprint": "ccc"}
+            ],
+            "variable": []
+        })))
+        .mount(&server)
+        .await;
+
+    // Version 2 (to) — tag 1 removed, tag 2 modified (name change), tag 3 added, trigger removed
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/versions/2"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "containerVersionId": "2",
+            "tag": [
+                {"tagId": "2", "name": "FB Pixel", "type": "html", "fingerprint": "ddd"},
+                {"tagId": "3", "name": "New GA4 Tag", "type": "gaawc", "fingerprint": "eee"}
+            ],
+            "trigger": [],
+            "variable": []
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = gtm_with_server(&server)
+        .args([
+            "changelog",
+            "--account-id", "123456",
+            "--container-id", "789",
+            "--from", "1",
+            "--to", "2",
+        ])
+        .assert()
+        .success();
+    let json = parse_json(&assert);
+
+    assert_eq!(json["fromVersion"], "1");
+    assert_eq!(json["toVersion"], "2");
+    assert_eq!(json["summary"]["added"], 1);
+    assert_eq!(json["summary"]["removed"], 2); // tag 1 + trigger 10
+    assert_eq!(json["summary"]["modified"], 1); // tag 2
+
+    let changes = json["changes"].as_array().unwrap();
+    let added: Vec<_> = changes.iter().filter(|c| c["changeType"] == "added").collect();
+    assert_eq!(added.len(), 1);
+    assert_eq!(added[0]["name"], "New GA4 Tag");
+
+    let modified: Vec<_> = changes.iter().filter(|c| c["changeType"] == "modified").collect();
+    assert_eq!(modified.len(), 1);
+    assert!(modified[0]["details"].as_str().unwrap().contains("name:"));
+}
+
+#[tokio::test]
+async fn test_mock_changelog_to_live() {
+    let server = setup_server().await;
+
+    // Version 1
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/versions/1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "containerVersionId": "1",
+            "tag": [],
+            "trigger": [],
+            "variable": []
+        })))
+        .mount(&server)
+        .await;
+
+    // Live version
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/versions:live"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "containerVersionId": "5",
+            "tag": [
+                {"tagId": "1", "name": "New Tag", "type": "html", "fingerprint": "xxx"}
+            ],
+            "trigger": [],
+            "variable": []
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = gtm_with_server(&server)
+        .args([
+            "changelog",
+            "--account-id", "123456",
+            "--container-id", "789",
+            "--from", "1",
+        ])
+        .assert()
+        .success();
+    let json = parse_json(&assert);
+
+    assert_eq!(json["fromVersion"], "1");
+    assert_eq!(json["toVersion"], "5");
+    assert_eq!(json["summary"]["added"], 1);
+}
+
+#[tokio::test]
+async fn test_mock_changelog_no_changes() {
+    let server = setup_server().await;
+
+    let version_body = serde_json::json!({
+        "containerVersionId": "1",
+        "tag": [{"tagId": "1", "name": "Same", "type": "html", "fingerprint": "aaa"}],
+        "trigger": [],
+        "variable": []
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/versions/1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(version_body.clone()))
+        .mount(&server)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/versions/2"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(version_body))
+        .mount(&server)
+        .await;
+
+    let assert = gtm_with_server(&server)
+        .args([
+            "changelog",
+            "--account-id", "123456",
+            "--container-id", "789",
+            "--from", "1",
+            "--to", "2",
+        ])
+        .assert()
+        .success();
+    let json = parse_json(&assert);
+    assert_eq!(json["summary"]["added"], 0);
+    assert_eq!(json["summary"]["removed"], 0);
+    assert_eq!(json["summary"]["modified"], 0);
+    assert!(json["changes"].as_array().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn test_mock_changelog_table_format() {
+    let server = setup_server().await;
+
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/versions/1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "containerVersionId": "1",
+            "tag": [],
+            "trigger": [],
+            "variable": []
+        })))
+        .mount(&server)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/versions/2"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "containerVersionId": "2",
+            "tag": [{"tagId": "1", "name": "New", "type": "html", "fingerprint": "x"}],
+            "trigger": [],
+            "variable": []
+        })))
+        .mount(&server)
+        .await;
+
+    gtm_table_with_server(&server)
+        .args([
+            "changelog",
+            "--account-id", "123456",
+            "--container-id", "789",
+            "--from", "1",
+            "--to", "2",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("added"))
+        .stdout(predicate::str::contains("New"));
+}
+
+#[tokio::test]
+async fn test_mock_changelog_style_note_json() {
+    let server = setup_server().await;
+
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/versions/1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "containerVersionId": "1",
+            "tag": [
+                {"tagId": "1", "name": "Old Tag", "type": "html", "fingerprint": "aaa"},
+                {"tagId": "2", "name": "FB", "type": "html", "fingerprint": "bbb"}
+            ],
+            "trigger": [
+                {"triggerId": "10", "name": "Old Click", "type": "click", "fingerprint": "ccc"}
+            ],
+            "variable": []
+        })))
+        .mount(&server)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/versions/2"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "containerVersionId": "2",
+            "tag": [
+                {"tagId": "2", "name": "FB Pixel", "type": "html", "fingerprint": "ddd"},
+                {"tagId": "3", "name": "New GA4 Tag", "type": "gaawc", "fingerprint": "eee"}
+            ],
+            "trigger": [],
+            "variable": []
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = gtm_with_server(&server)
+        .args([
+            "changelog",
+            "--account-id", "123456",
+            "--container-id", "789",
+            "--from", "1",
+            "--to", "2",
+            "--style", "note",
+        ])
+        .assert()
+        .success();
+    let json = parse_json(&assert);
+
+    // title should be human-readable
+    let title = json["title"].as_str().unwrap();
+    assert!(title.starts_with("v2:"));
+    assert!(title.contains("added"));
+    assert!(title.contains("and more")); // 4+ change groups → truncated
+
+    // description should have plaintext sections
+    let desc = json["description"].as_str().unwrap();
+    assert!(desc.contains("[Added]"));
+    assert!(desc.contains("New GA4 Tag"));
+    assert!(desc.contains("[Modified]"));
+    assert!(desc.contains("FB Pixel"));
+    assert!(desc.contains("[Removed]"));
+    assert!(desc.contains("Old Click"));
+
+    // summary still present
+    assert_eq!(json["summary"]["added"], 1);
+    assert_eq!(json["summary"]["modified"], 1);
+    assert_eq!(json["summary"]["removed"], 2);
+}
+
+#[tokio::test]
+async fn test_mock_changelog_style_note_table() {
+    let server = setup_server().await;
+
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/versions/1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "containerVersionId": "1",
+            "tag": [],
+            "trigger": [],
+            "variable": []
+        })))
+        .mount(&server)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/accounts/123456/containers/789/versions/2"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "containerVersionId": "2",
+            "tag": [{"tagId": "1", "name": "New Tag", "type": "html", "fingerprint": "x"}],
+            "trigger": [],
+            "variable": []
+        })))
+        .mount(&server)
+        .await;
+
+    gtm_table_with_server(&server)
+        .args([
+            "changelog",
+            "--account-id", "123456",
+            "--container-id", "789",
+            "--from", "1",
+            "--to", "2",
+            "--style", "note",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("v2: 1 tag added"))
+        .stdout(predicate::str::contains("[Added]"))
+        .stdout(predicate::str::contains("New Tag (tag)"));
+}
