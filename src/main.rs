@@ -15,7 +15,22 @@ use config::Config;
 use output::formatter::OutputFormat;
 
 #[derive(Parser)]
-#[command(name = "gtm", version, about = "Google Tag Manager CLI")]
+#[command(
+    name = "gtm",
+    version,
+    about = "Google Tag Manager CLI",
+    long_about = "Google Tag Manager CLI — built for humans and AI agents.\n\n\
+        Exit codes: 0 = success, 1 = API error, 2 = auth error, 3 = validation error, 4 = invalid input.\n\
+        When piped, outputs JSON to stdout and structured error JSON to stderr.\n\n\
+        AI agents: Run `gtm agent guide` for comprehensive documentation,\n\
+        or `gtm doctor` to verify environment setup.",
+    after_help = "AI AGENT TIPS:\n  \
+        • Use --format json for structured output\n  \
+        • Use --dry-run to preview mutations\n  \
+        • Run `gtm doctor --format json` to check environment\n  \
+        • Run `gtm agent guide` for full agent documentation\n  \
+        • See AGENTS.md in the repo for machine-readable reference"
+)]
 pub struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -87,6 +102,8 @@ enum Commands {
     Validate(commands::validate::ValidateArgs),
     /// Compare two container versions and show changes
     Changelog(commands::changelog::ChangelogArgs),
+    /// Check environment setup (credentials, auth, config)
+    Doctor(commands::doctor::DoctorArgs),
     /// Upgrade to the latest version
     Upgrade(commands::upgrade::UpgradeArgs),
     /// Generate shell completions
@@ -141,6 +158,7 @@ async fn main() {
         Commands::Auth(args) => commands::auth::handle(args, &config).await,
         Commands::Upgrade(args) => commands::upgrade::handle(args).await,
         Commands::Completions(args) => commands::completions::handle(args),
+        Commands::Doctor(args) => commands::doctor::handle(args, &format).await,
         Commands::Config(args) => {
             // Setup needs a client; get/set/unset don't
             let needs_client = matches!(args.action, commands::config::ConfigAction::Setup);
@@ -158,6 +176,7 @@ async fn main() {
                 | Commands::Auth(_)
                 | Commands::Upgrade(_)
                 | Commands::Completions(_)
+                | Commands::Doctor(_)
                 | Commands::Config(_) => {
                     unreachable!()
                 }

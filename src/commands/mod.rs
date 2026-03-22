@@ -8,6 +8,7 @@ pub mod completions;
 pub mod config;
 pub mod containers;
 pub mod destinations;
+pub mod doctor;
 pub mod environments;
 pub mod folders;
 pub mod gtag_configs;

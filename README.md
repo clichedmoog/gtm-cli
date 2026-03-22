@@ -201,6 +201,7 @@ Environment variables take precedence:
 | `setup` | Quick setup workflows (GA4, Facebook Pixel, form tracking) |
 | `validate` | Validate workspace resources for common issues (unused triggers, orphan tags, etc.) |
 | `changelog` | Compare two container versions and show changes (added/removed/modified) |
+| `doctor` | Check environment setup (credentials, auth, config) |
 | `config` | Manage default settings |
 | `upgrade` | Self-update to latest version |
 | `agent guide` | Documentation for AI agents |
@@ -250,11 +251,21 @@ gtm completions fish > ~/.config/fish/completions/gtm.fish
 
 ## AI Agent Integration
 
-```bash
-gtm agent guide    # Print comprehensive guide for AI agents
-```
+Built for AI agents and LLM tool-use workflows:
 
-The CLI outputs structured JSON by default when piped, making it ideal for automation and AI agent workflows.
+- **Structured output** — JSON by default when piped, structured error JSON to stderr
+- **Stable exit codes** — `0` success, `1` API error, `2` auth, `3` validation, `4` invalid input
+- **Environment diagnostics** — `gtm doctor --format json` for preflight checks
+- **Comprehensive guide** — `gtm agent guide` for full documentation
+- **Machine-readable spec** — See [`AGENTS.md`](AGENTS.md) for the complete reference
+
+```bash
+# Quick setup for agents
+gtm doctor --format json          # Verify environment
+gtm agent guide                   # Full documentation
+gtm tags list --format json       # Structured output
+gtm tags create --dry-run ...     # Preview before mutating
+```
 
 ## Development
 

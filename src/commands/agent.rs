@@ -159,9 +159,26 @@ gtm containers list | jq '.[] | select(.publicId == "GTM-XXXXX")'
 gtm tags list --format compact   # ID + name only
 ```
 
+## Diagnostics
+
+```bash
+gtm doctor              # Check credentials, auth, config
+gtm doctor --format json  # Machine-readable diagnostics
+```
+
 ## Error Handling
 
-- Exit code 0: Success
-- Exit code 1: Error (message printed to stderr)
-- Rate limiting (429): Automatically retried with exponential backoff.
+Exit codes:
+- 0: Success
+- 1: API / general error
+- 2: Authentication error → run `gtm auth login`
+- 3: Validation error → review `gtm validate` output
+- 4: Invalid input → fix parameters / JSON
+
+When stderr is piped (non-TTY), errors are structured JSON:
+```json
+{"error": {"code": 2, "type": "auth_required", "message": "..."}}
+```
+
+Rate limiting (429) is automatically retried with exponential backoff.
 "#;

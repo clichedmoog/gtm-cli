@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::api::client::GtmApiClient;
 use crate::api::workspace::resolve_workspace;
-use crate::error::Result;
+use crate::error::{GtmError, Result};
 use crate::output::formatter::OutputFormat;
 
 #[derive(Args)]
@@ -224,7 +224,7 @@ pub async fn handle(
     }
 
     if errors > 0 {
-        std::process::exit(1);
+        return Err(GtmError::ValidationFailed(errors));
     }
     Ok(())
 }
