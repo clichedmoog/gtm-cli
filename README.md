@@ -1,5 +1,7 @@
 # GTM CLI
 
+[![GitHub stars](https://img.shields.io/github/stars/clichedmoog/gtm-cli)](https://github.com/clichedmoog/gtm-cli/stargazers) [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/) [![CI](https://github.com/clichedmoog/gtm-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/clichedmoog/gtm-cli/actions/workflows/ci.yml) [![npm](https://img.shields.io/npm/v/gtmcli)](https://www.npmjs.com/package/gtmcli)
+
 A command-line interface for the Google Tag Manager API v2 — built for humans and AI agents.
 
 ```
