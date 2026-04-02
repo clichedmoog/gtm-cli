@@ -125,21 +125,34 @@ gtm workspaces status --account-id 123 --container-id 456 --workspace-id 1
 All workspace-scoped resources follow the same pattern:
 
 ```bash
-gtm <resource> list   [--account-id --container-id]
-gtm <resource> get    [--account-id --container-id --<resource>-id]
-gtm <resource> create [--account-id --container-id --name ... --params '{}']
-gtm <resource> update [--account-id --container-id --<resource>-id --name ...]
-gtm <resource> delete [--account-id --container-id --<resource>-id --force]
-gtm <resource> revert [--account-id --container-id --<resource>-id]
+gtm <resource> list   [--name <FILTER>] [--type <TYPE>]
+gtm <resource> get    --<resource>-id <ID>
+gtm <resource> create --name <NAME> [--type <TYPE>] [--params '<JSON>' | --params-file <FILE>]
+gtm <resource> update --<resource>-id <ID> [--name <NAME>] [--params '<JSON>' | --params-file <FILE>]
+gtm <resource> delete --<resource>-id <ID> --force
+gtm <resource> revert --<resource>-id <ID>
+```
+
+## List Filters
+
+`--name` does case-insensitive substring matching. `--type` is exact match.
+
+```bash
+gtm tags list --name "GA4"            # Tags containing "GA4"
+gtm tags list --type gaawe            # GA4 event tags only
+gtm variables list --type v           # Data layer variables
 ```
 
 ## Parameters Format
 
-Tags, triggers, and variables accept `--params` as a JSON string:
+Tags, triggers, and variables accept `--params` as a JSON string or `--params-file` for file input:
 
 ```bash
 gtm tags create --name "Event Tag" --type gaawe \
   --params '{"measurementId": "G-XXXXX", "eventName": "purchase"}'
+
+# For complex params (Custom HTML, etc.), use a file to avoid escaping:
+gtm tags create --name "Script" --type html --params-file tag.json
 ```
 
 The JSON is automatically converted to GTM's nested parameter format.

@@ -80,12 +80,32 @@ Single resource endpoints return objects: `{...}`
 All workspace-scoped resources follow the same pattern:
 
 ```
-gtm <resource> list
+gtm <resource> list   [--name <FILTER>] [--type <TYPE>]
 gtm <resource> get    --<resource>-id <ID>
-gtm <resource> create --name <NAME> [--type <TYPE>] [--params '<JSON>']
-gtm <resource> update --<resource>-id <ID> [--name <NAME>] [--params '<JSON>']
+gtm <resource> create --name <NAME> [--type <TYPE>] [--params '<JSON>' | --params-file <FILE>]
+gtm <resource> update --<resource>-id <ID> [--name <NAME>] [--params '<JSON>' | --params-file <FILE>]
 gtm <resource> delete --<resource>-id <ID> --force
 gtm <resource> revert --<resource>-id <ID>
+```
+
+### List Filters
+
+`--name` does case-insensitive substring matching. `--type` is exact match.
+
+```bash
+gtm tags list --name "GA4"                  # Tags containing "GA4"
+gtm tags list --type gaawe                  # GA4 event tags only
+gtm variables list --type v                 # Data layer variables
+gtm triggers list --name "click"            # Triggers with "click" in name
+```
+
+### File-based Parameters
+
+Use `--params-file` (or `--filter-file` for triggers) to avoid shell escaping issues, especially for Custom HTML tags:
+
+```bash
+gtm tags create --name "Tracking Script" --type html --params-file tag.json
+gtm tags update --tag-id 123 --params-file updated-tag.json
 ```
 
 Resources: `tags`, `triggers`, `variables`, `folders`, `templates`, `clients`, `gtag-configs`, `transformations`, `zones`, `builtin-variables`

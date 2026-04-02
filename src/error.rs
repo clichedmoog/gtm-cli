@@ -80,11 +80,22 @@ impl GtmError {
         } else {
             // Human-friendly for terminals
             eprintln!("Error: {self}");
-            if matches!(
-                self,
-                GtmError::AuthRequired | GtmError::TokenRefreshFailed(_)
-            ) {
-                eprintln!("Hint: Run `gtm auth login` to authenticate.");
+            match self {
+                GtmError::AuthRequired | GtmError::TokenRefreshFailed(_) => {
+                    eprintln!("Hint: Run `gtm auth login` to authenticate.");
+                }
+                GtmError::ApiError {
+                    status: 403,
+                    message,
+                } if message.contains("scope") || message.contains("authentication") => {
+                    eprintln!("Hint: Insufficient OAuth scopes. Run `gtm auth login` to re-authenticate with required permissions.");
+                    eprintln!("      Publishing requires the tagmanager.publish scope.");
+                }
+                GtmError::ApiError { status: 403, .. } => {
+                    eprintln!("Hint: Check that your account has the necessary GTM permissions.");
+                    eprintln!("      Use `gtm permissions list` to view current access.");
+                }
+                _ => {}
             }
         }
 

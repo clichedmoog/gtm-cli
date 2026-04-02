@@ -42,6 +42,12 @@ pub enum TriggersAction {
 pub struct TriggersListArgs {
     #[command(flatten)]
     ws: WorkspaceFlags,
+    /// Filter by name (substring match, case-insensitive)
+    #[arg(long)]
+    name: Option<String>,
+    /// Filter by trigger type (e.g., pageview, click, customEvent)
+    #[arg(long = "type")]
+    trigger_type: Option<String>,
 }
 
 #[derive(Args)]
@@ -66,8 +72,11 @@ pub struct TriggersCreateArgs {
     #[arg(long)]
     custom_event_filter: Option<String>,
     /// Filter conditions as JSON array
-    #[arg(long)]
+    #[arg(long, conflicts_with = "filter_file")]
     filter: Option<String>,
+    /// Read filter from a JSON file instead of --filter
+    #[arg(long)]
+    filter_file: Option<String>,
 }
 
 #[derive(Args)]
@@ -78,8 +87,11 @@ pub struct TriggersUpdateArgs {
     trigger_id: String,
     #[arg(long)]
     name: Option<String>,
-    #[arg(long)]
+    #[arg(long, conflicts_with = "filter_file")]
     filter: Option<String>,
+    /// Read filter from a JSON file instead of --filter
+    #[arg(long)]
+    filter_file: Option<String>,
 }
 
 #[derive(Args)]
@@ -115,6 +127,47 @@ async fn workspace_path(ws: &WorkspaceFlags, client: &GtmApiClient) -> Result<St
     ))
 }
 
+fn resolve_filter(
+    filter: &Option<String>,
+    filter_file: &Option<String>,
+) -> std::result::Result<Option<serde_json::Value>, GtmError> {
+    if let Some(path) = filter_file {
+        let content = std::fs::read_to_string(path)
+            .map_err(|e| GtmError::InvalidParams(format!("Cannot read {path}: {e}")))?;
+        let val = serde_json::from_str(&content)
+            .map_err(|_| GtmError::InvalidParams(format!("Invalid JSON in {path}")))?;
+        Ok(Some(val))
+    } else if let Some(f) = filter {
+        let val = serde_json::from_str(f).map_err(|_| GtmError::InvalidParams(f.clone()))?;
+        Ok(Some(val))
+    } else {
+        Ok(None)
+    }
+}
+
+fn filter_resources(
+    result: &mut serde_json::Value,
+    key: &str,
+    name: Option<&str>,
+    type_filter: Option<&str>,
+) {
+    if let Some(arr) = result.get_mut(key).and_then(|v| v.as_array_mut()) {
+        arr.retain(|item| {
+            let name_match = name.is_none_or(|n| {
+                item.get("name")
+                    .and_then(|v| v.as_str())
+                    .is_some_and(|s| s.to_lowercase().contains(&n.to_lowercase()))
+            });
+            let type_match = type_filter.is_none_or(|t| {
+                item.get("type")
+                    .and_then(|v| v.as_str())
+                    .is_some_and(|s| s.eq_ignore_ascii_case(t))
+            });
+            name_match && type_match
+        });
+    }
+}
+
 pub async fn handle(
     args: TriggersArgs,
     client: &GtmApiClient,
@@ -123,7 +176,15 @@ pub async fn handle(
     match args.action {
         TriggersAction::List(a) => {
             let base = workspace_path(&a.ws, client).await?;
-            let result = client.get_all(&format!("{base}/triggers")).await?;
+            let mut result = client.get_all(&format!("{base}/triggers")).await?;
+            if a.name.is_some() || a.trigger_type.is_some() {
+                filter_resources(
+                    &mut result,
+                    "trigger",
+                    a.name.as_deref(),
+                    a.trigger_type.as_deref(),
+                );
+            }
             print_resource(&result, format, "triggers");
         }
         TriggersAction::Get(a) => {
@@ -148,9 +209,7 @@ pub async fn handle(
                     ]
                 }]);
             }
-            if let Some(filter) = a.filter {
-                let parsed: serde_json::Value =
-                    serde_json::from_str(&filter).map_err(|_| GtmError::InvalidParams(filter))?;
+            if let Some(parsed) = resolve_filter(&a.filter, &a.filter_file)? {
                 body["filter"] = parsed;
             }
             let result = client.post(&format!("{base}/triggers"), &body).await?;
@@ -163,9 +222,7 @@ pub async fn handle(
             if let Some(name) = a.name {
                 body["name"] = json!(name);
             }
-            if let Some(filter) = a.filter {
-                let parsed: serde_json::Value =
-                    serde_json::from_str(&filter).map_err(|_| GtmError::InvalidParams(filter))?;
+            if let Some(parsed) = resolve_filter(&a.filter, &a.filter_file)? {
                 body["filter"] = parsed;
             }
             let result = client.put(&path, &body).await?;
