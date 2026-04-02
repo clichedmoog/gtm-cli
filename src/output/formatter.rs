@@ -56,11 +56,9 @@ fn unwrap_json(value: &Value) -> Value {
 }
 
 fn print_compact(value: &Value) {
-    // ID field candidates in priority order
+    // Resource-specific ID fields first, then parent IDs as fallback.
+    // Order matters: first match wins.
     let id_keys = [
-        "accountId",
-        "containerId",
-        "workspaceId",
         "tagId",
         "triggerId",
         "variableId",
@@ -76,6 +74,9 @@ fn print_compact(value: &Value) {
         "destinationLinkId",
         "permissionId",
         "gtagConfigId",
+        "workspaceId",
+        "containerId",
+        "accountId",
     ];
 
     let print_item = |item: &Value| {
@@ -84,7 +85,28 @@ fn print_compact(value: &Value) {
             .find_map(|k| item.get(k).and_then(|v| v.as_str()))
             .unwrap_or("-");
         let name = item.get("name").and_then(|v| v.as_str()).unwrap_or("-");
-        println!("{id}\t{name}");
+        // Include type and firing triggers if available
+        let type_str = item.get("type").and_then(|v| v.as_str()).unwrap_or("");
+        let triggers = item
+            .get("firingTriggerId")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            })
+            .unwrap_or_default();
+        if !type_str.is_empty() || !triggers.is_empty() {
+            let trigger_col = if triggers.is_empty() {
+                String::new()
+            } else {
+                format!("\ttrigger:{triggers}")
+            };
+            println!("{id}\t{name}\t{type_str}{trigger_col}");
+        } else {
+            println!("{id}\t{name}");
+        }
     };
 
     // Handle arrays at top level or wrapped in a resource key
