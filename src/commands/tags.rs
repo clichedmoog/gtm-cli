@@ -76,6 +76,9 @@ pub struct TagsCreateArgs {
     /// Read parameters from a JSON file instead of --params
     #[arg(long)]
     pub params_file: Option<String>,
+    /// Read HTML from stdin for Custom HTML tags (e.g., cat script.html | gtm tags create --type html --html-stdin)
+    #[arg(long, conflicts_with_all = ["params", "params_file"])]
+    pub html_stdin: bool,
     /// Firing trigger IDs (comma-separated)
     #[arg(long, value_delimiter = ',')]
     pub firing_trigger_id: Vec<String>,
@@ -98,6 +101,9 @@ pub struct TagsUpdateArgs {
     /// Read parameters from a JSON file instead of --params
     #[arg(long)]
     pub params_file: Option<String>,
+    /// Read HTML from stdin for Custom HTML tags (e.g., cat script.html | gtm tags update --tag-id 123 --html-stdin)
+    #[arg(long, conflicts_with_all = ["params", "params_file"])]
+    pub html_stdin: bool,
     #[arg(long, value_delimiter = ',')]
     pub firing_trigger_id: Vec<String>,
     #[arg(long, value_delimiter = ',')]
@@ -153,6 +159,20 @@ fn resolve_params(
     }
 }
 
+fn read_stdin() -> Result<String> {
+    use std::io::Read;
+    let mut buf = String::new();
+    std::io::stdin()
+        .read_to_string(&mut buf)
+        .map_err(|e| GtmError::InvalidParams(format!("Failed to read stdin: {e}")))?;
+    if buf.is_empty() {
+        return Err(GtmError::InvalidParams(
+            "No input received from stdin".into(),
+        ));
+    }
+    Ok(buf)
+}
+
 fn filter_resources(
     result: &mut serde_json::Value,
     key: &str,
@@ -193,7 +213,12 @@ pub async fn handle(args: TagsArgs, client: &GtmApiClient, format: &OutputFormat
         }
         TagsAction::Create(a) => {
             let base = workspace_path(&a.ws, client).await?;
-            let mut raw_params = resolve_params(&a.params, &a.params_file)?;
+            let mut raw_params = if a.html_stdin {
+                let html = read_stdin()?;
+                json!({"html": html})
+            } else {
+                resolve_params(&a.params, &a.params_file)?
+            };
             if a.tag_type == "gaawe" {
                 transform_event_params(&mut raw_params);
             }
@@ -222,7 +247,10 @@ pub async fn handle(args: TagsArgs, client: &GtmApiClient, format: &OutputFormat
             if let Some(name) = a.name {
                 body["name"] = json!(name);
             }
-            if a.params.is_some() || a.params_file.is_some() {
+            if a.html_stdin {
+                let html = read_stdin()?;
+                body["parameter"] = json!(params_from_json(&json!({"html": html})));
+            } else if a.params.is_some() || a.params_file.is_some() {
                 let mut raw = resolve_params(&a.params, &a.params_file)?;
                 let tag_type = body.get("type").and_then(|v| v.as_str()).unwrap_or("");
                 if tag_type == "gaawe" {
